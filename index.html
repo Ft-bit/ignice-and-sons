@@ -13,25 +13,22 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 
 <!-- ══════════════════════════════════════
-     FIREBASE — YOUR REAL CONFIG
+     FIREBASE — REDIRECT-ONLY (no popup)
 ══════════════════════════════════════ -->
 <script type="module">
 import { initializeApp }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import {
   getAuth, GoogleAuthProvider,
-  signInWithPopup, signInWithRedirect, getRedirectResult,
+  signInWithRedirect, getRedirectResult,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
   signOut, onAuthStateChanged, updateProfile, sendPasswordResetEmail
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import {
   getFirestore, collection, addDoc, getDocs, query,
-  orderBy, serverTimestamp, doc, updateDoc, getDoc, setDoc
+  orderBy, serverTimestamp, doc, getDoc, setDoc
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-// ── YOUR FIREBASE CONFIG ──
-// authDomain MUST stay as the .firebaseapp.com domain for Google auth to work.
-// Your GitHub Pages domain goes in Firebase Console → Auth → Authorized Domains.
 const firebaseConfig = {
   apiKey:            "AIzaSyDsY53Imzxz72aJG9lBLcj32oqGRC6jj7c",
   authDomain:        "ignice-and-sons.firebaseapp.com",
@@ -45,62 +42,84 @@ const firebaseConfig = {
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
-const gp   = new GoogleAuthProvider();
+
+// Google provider — redirect ONLY, never popup
+const gp = new GoogleAuthProvider();
 gp.addScope('email');
 gp.addScope('profile');
 gp.setCustomParameters({ prompt: 'select_account' });
 
+// Expose everything to window
 window._fb = {
   auth, db, gp,
-  signInWithPopup, signInWithRedirect, getRedirectResult,
-  createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  signInWithRedirect,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
   signOut, updateProfile, sendPasswordResetEmail,
   collection, addDoc, getDocs, query, orderBy,
-  serverTimestamp, doc, updateDoc, getDoc, setDoc
+  serverTimestamp, doc, getDoc, setDoc
 };
-window._fbReady    = true;
+window._fbReady      = true;
 window._authResolved = false;
 
-// ── Handle redirect result (for mobile / popup-blocked fallback) ──
+// ── Handle Google redirect return ──
+// When user comes BACK from Google after sign-in, this fires
 getRedirectResult(auth).then(async result => {
-  if (!result) return;
-  const user = result.user;
-  try {
-    const uref = doc(db, 'users', user.uid);
-    const snap = await getDoc(uref);
-    const parts = (user.displayName || '').split(' ');
-    if (!snap.exists()) {
-      await setDoc(uref, {
-        firstName: parts[0] || '', lastName: parts.slice(1).join(' ') || '',
-        displayName: user.displayName || user.email,
-        email: user.email, photo: user.photoURL || '',
-        provider: 'google', createdAt: serverTimestamp()
-      });
-    } else {
-      await setDoc(uref, {
-        photo: user.photoURL || '', displayName: user.displayName || user.email,
-        lastLogin: serverTimestamp()
-      }, { merge: true });
-    }
-  } catch(e) { console.log('Firestore after redirect (non-fatal):', e); }
-  // Close modal if open, go to profile
-  if (typeof window.closeLogin === 'function') window.closeLogin();
-  if (typeof window.go === 'function') window.go('profile');
-}).catch(e => { console.log('Redirect result error (non-fatal):', e); });
+  if (!result || !result.user) return;
+  const user  = result.user;
+  const uref  = doc(db, 'users', user.uid);
+  const snap  = await getDoc(uref).catch(()=>null);
+  const parts = (user.displayName || '').split(' ');
+  const data  = {
+    firstName:   parts[0] || '',
+    lastName:    parts.slice(1).join(' ') || '',
+    displayName: user.displayName || user.email || '',
+    email:       user.email || '',
+    photo:       user.photoURL || '',
+    provider:    'google',
+    lastLogin:   serverTimestamp()
+  };
+  if (!snap || !snap.exists()) {
+    data.createdAt = serverTimestamp();
+    await setDoc(uref, data).catch(()=>{});
+  } else {
+    await setDoc(uref, data, { merge: true }).catch(()=>{});
+  }
+  // Mark that we just came back from Google redirect
+  sessionStorage.setItem('_gRedirect','1');
+}).catch(e => {
+  console.warn('getRedirectResult:', e.code || e.message);
+  // Store error so we can show it after page reload
+  if (e.code && e.code !== 'auth/null-user') {
+    sessionStorage.setItem('_gErr', e.code);
+  }
+});
 
 // ── Auth State Observer ──
 onAuthStateChanged(auth, async user => {
+  // Fix missing displayName for Google users
   if (user && !user.displayName) {
-    const pn = user.providerData?.[0]?.displayName;
-    if (pn) { try { await updateProfile(user, { displayName: pn }); } catch(e){} }
+    const pname = user.providerData?.[0]?.displayName;
+    if (pname) {
+      await updateProfile(user, { displayName: pname }).catch(()=>{});
+    }
   }
   window._user         = user || null;
   window._authResolved = true;
-  if (typeof window._onUser    === 'function') window._onUser(user);
-  if (typeof window._renderProf === 'function') {
-    if (document.getElementById('pg-profile')?.classList.contains('on')) {
-      window._renderProf(user);
+
+  if (typeof window._onUser === 'function') window._onUser(user);
+
+  // If we just came back from Google redirect → go to profile
+  if (sessionStorage.getItem('_gRedirect') === '1') {
+    sessionStorage.removeItem('_gRedirect');
+    if (user && typeof window.go === 'function') {
+      window.go('profile');
     }
+  }
+
+  // Re-render profile if it's showing
+  if (document.getElementById('pg-profile')?.classList.contains('on')) {
+    if (typeof window._renderProf === 'function') window._renderProf(user);
   }
 });
 </script>
@@ -385,6 +404,7 @@ button{font-family:var(--fb)}
    ABOUT PAGE
 ══════════════════════════════ */
 .about-hero{background:linear-gradient(135deg,var(--gd),var(--g));padding:80px 32px;text-align:center;position:relative;overflow:hidden}
+.page-hero{background:linear-gradient(135deg,var(--gd),var(--g));padding:72px 32px;text-align:center}
 .about-hero::before{content:'';position:absolute;inset:0;opacity:.06;background-image:linear-gradient(rgba(255,255,255,.6) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.6) 1px,transparent 1px);background-size:40px 40px}
 .about-body{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start;padding:72px 32px;max-width:1300px;margin:0 auto}
 .about-img{border-radius:var(--r);overflow:hidden;aspect-ratio:4/3;background:var(--gl)}
@@ -532,50 +552,129 @@ button{font-family:var(--fb)}
 @keyframes sp{to{transform:rotate(360deg)}}
 
 /* ══════════════════════════════
-   RESPONSIVE
+   RESPONSIVE — MOBILE FRIENDLY
 ══════════════════════════════ */
 @media(max-width:1024px){
-  .hin{grid-template-columns:1fr;text-align:center}
-  .ht p{margin:0 auto 38px}
+  .hin{grid-template-columns:1fr;text-align:center;padding:70px 24px;gap:36px}
+  .ht p{margin:0 auto 36px}
   .hcta{justify-content:center}
   .htr{justify-content:center}
-  .hv{margin-top:20px}
-  .ain{grid-template-columns:1fr}
-  .ac .eye{text-align:center}
-  .ac h2{text-align:center}
+  .hv{margin-top:0}
+  .ain{grid-template-columns:1fr;gap:44px}
+  .ac .eye,.ac h2,.ac p{text-align:center}
+  .alist li{text-align:left}
+  .ac .btn-ab{display:flex;justify-content:center}
   .astats{grid-template-columns:1fr 1fr}
   .cgrid{grid-template-columns:1fr}
-  .fin{grid-template-columns:1fr 1fr}
-  .about-body{grid-template-columns:1fr}
+  .fin{grid-template-columns:1fr 1fr;gap:32px}
+  .about-body{grid-template-columns:1fr;padding:56px 24px;gap:32px}
+  .about-vals{grid-template-columns:1fr 1fr}
+  .num-grid{grid-template-columns:1fr 1fr}
   .pcards{grid-template-columns:1fr}
+  .prof-banner-in{flex-direction:column;text-align:center;gap:14px}
+  .prof-content{padding:0 20px 40px}
 }
 @media(max-width:768px){
+  /* Nav */
   .nl,.na{display:none}
   .ham{display:flex}
-  .fc.t{top:-10px;right:-10px}
-  .fc.b{bottom:-10px;left:-10px}
-  .frow{grid-template-columns:1fr}
-  .fin{grid-template-columns:1fr;gap:34px}
-  .modal{padding:32px 22px}
-  .pgrid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
-  .prof-banner-in{flex-direction:column;text-align:center}
-  .prof-content{padding:0 18px}
+  /* Hero */
+  .hin{padding:56px 18px}
+  .fc.t,.fc.b{display:none}
+  /* Section padding */
+  .section-pad{padding:56px 18px}
+  .section-pad-sm{padding:44px 18px}
+  .about-strip{padding:56px 18px}
+  /* Products */
+  .pgrid{grid-template-columns:1fr 1fr;gap:14px}
+  .pin{padding:12px 14px}
+  .pin h3{font-size:.88rem}
+  .pin p{font-size:.78rem;display:none}
+  .pmeta{flex-direction:column;align-items:flex-start;gap:2px}
+  /* Features grid */
+  .fgrid{grid-template-columns:1fr 1fr;gap:14px}
+  .fcard{padding:20px 16px}
+  .fcard p{font-size:.82rem}
+  /* About */
+  .about-body{padding:40px 18px}
   .about-vals{grid-template-columns:1fr}
-  .num-grid{grid-template-columns:1fr 1fr}
-  .soc-grid{grid-template-columns:1fr}
-  .about-body{padding:50px 18px}
+  .num-grid{grid-template-columns:1fr 1fr;gap:10px}
+  /* Contact */
+  .cgrid{grid-template-columns:1fr;gap:28px}
+  .frow{grid-template-columns:1fr}
+  .fg input,.fg select,.fg textarea{font-size:16px} /* prevents iOS zoom */
+  /* FAQ */
+  .faq-container{padding:36px 18px}
+  .faq-q{padding:15px 16px;font-size:.9rem}
+  .faq-a.op{padding:14px 16px;font-size:.88rem}
+  /* Footer */
+  .fin{grid-template-columns:1fr;gap:26px}
+  /* Modal */
+  .modal{padding:30px 20px;margin:12px;border-radius:18px}
+  .mform .frow{grid-template-columns:1fr}
+  /* Reviews */
+  .rev-grid{grid-template-columns:1fr}
+  .rev-write{padding:24px 18px}
+  /* Profile */
+  .prof-banner{padding:28px 18px}
+  .prof-banner-in{flex-direction:column;text-align:center;gap:12px}
+  .prof-content{padding:0 16px 32px}
+  .prof-tabs{gap:6px;padding:0 16px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .ptab2{font-size:.78rem;padding:8px 14px;white-space:nowrap}
+  .pcards{grid-template-columns:1fr;gap:14px}
+  .pcard{padding:20px 16px}
+  .pmenu .pmi{padding:12px 14px}
+  .stat-mini{grid-template-columns:1fr 1fr}
+  .soc-grid{grid-template-columns:1fr 1fr}
+  /* Ticker */
+  .ti2{padding:0 20px;font-size:.72rem}
+  /* Page hero banners */
+  .page-hero{padding:52px 18px}
 }
 @media(max-width:480px){
-  .hin{padding:70px 20px}
+  /* Hero */
+  .hin{padding:48px 16px}
+  .hbadge{font-size:.68rem;padding:6px 12px}
+  .ht h1{font-size:2rem;letter-spacing:-.02em}
   .hcta{flex-direction:column;align-items:stretch}
-  .htr{gap:16px}.ts{display:none}
+  .btn-hero,.btn-hout{justify-content:center;text-align:center;padding:13px 20px}
+  .htr{gap:12px}.ts{display:none}
+  .hbox{border-radius:16px}
+  /* Trust stats */
+  .ti strong{font-size:1.3rem}
+  .ti span{font-size:.64rem}
+  /* CTA section */
   .cta-btns{flex-direction:column;align-items:stretch}
-  .section-pad{padding:72px 20px}
-  .section-pad-sm{padding:56px 20px}
-  .about-strip{padding:72px 20px}
-  .fc{display:none}
+  /* Products */
+  .pgrid{grid-template-columns:1fr 1fr;gap:10px}
+  .ptabs{gap:5px}
+  .ptab{padding:6px 12px;font-size:.74rem}
+  /* About */
+  .about-strip{padding:48px 16px}
+  .astats{grid-template-columns:1fr 1fr;gap:8px}
+  .astat{padding:16px 12px}
+  .astat strong{font-size:1.7rem}
+  /* Contact */
+  .section-pad{padding:44px 16px}
+  .ci{gap:10px}
+  .cion{width:32px;height:32px;min-width:32px;font-size:.85rem;border-radius:8px}
+  /* FAQ */
+  .faq-container{padding:28px 16px}
+  /* Footer */
+  .fin{gap:22px}
+  /* Profile */
   .prof-tabs{flex-wrap:wrap}
-  .mform .frow{grid-template-columns:1fr}
+  .ptab2{flex:1 1 calc(50% - 6px);min-width:0}
+  .soc-grid{grid-template-columns:1fr}
+  /* Typography */
+  .stit{font-size:1.65rem}
+  .ssub{font-size:.87rem;margin-bottom:32px}
+  /* About page */
+  .about-vals{grid-template-columns:1fr}
+  .num-grid{grid-template-columns:1fr 1fr;gap:8px}
+  /* Announce bar */
+  .ab{font-size:.7rem;padding:8px 12px}
+  .ab a{display:block;margin-top:2px}
 }
 </style>
 </head>
@@ -811,7 +910,7 @@ button{font-family:var(--fb)}
      PAGE: REVIEWS
 ══════════════════════════════════════ -->
 <div id="pg-reviews" class="pg">
-  <div style="background:linear-gradient(135deg,var(--gd),var(--g));padding:72px 32px;text-align:center">
+  <div class="page-hero">
     <p class="eye" style="color:var(--gol)">Customer Reviews</p>
     <h1 style="font-family:var(--fd);font-size:clamp(2rem,4vw,3rem);font-weight:900;color:#fff;letter-spacing:-.03em">All Reviews</h1>
     <p style="color:rgba(255,255,255,.68);max-width:440px;margin:12px auto 0">Genuine reviews from our 10,000+ customers. Log in to share yours!</p>
@@ -887,7 +986,7 @@ button{font-family:var(--fb)}
      PAGE: CONTACT
 ══════════════════════════════════════ -->
 <div id="pg-contact" class="pg">
-  <div style="background:linear-gradient(135deg,var(--gd),var(--g));padding:72px 32px;text-align:center">
+  <div class="page-hero">
     <p class="eye" style="color:var(--gol)">Get In Touch</p>
     <h1 style="font-family:var(--fd);font-size:clamp(2rem,4vw,3rem);font-weight:900;color:#fff;letter-spacing:-.03em">Contact Us</h1>
     <p style="color:rgba(255,255,255,.68);max-width:440px;margin:12px auto 0">Place an order, ask a question, or visit our showroom.</p>
@@ -936,7 +1035,7 @@ button{font-family:var(--fb)}
      PAGE: FAQ
 ══════════════════════════════════════ -->
 <div id="pg-faq" class="pg" style="background:var(--ow)">
-  <div style="background:linear-gradient(135deg,var(--gd),var(--g));padding:72px 32px;text-align:center">
+  <div class="page-hero">
     <p class="eye" style="color:var(--gol)">Help Center</p>
     <h1 style="font-family:var(--fd);font-size:clamp(2rem,4vw,3rem);font-weight:900;color:#fff;letter-spacing:-.03em">Frequently Asked Questions</h1>
     <p style="color:rgba(255,255,255,.68);max-width:440px;margin:12px auto 0">Everything you need to know about our products and services.</p>
@@ -1114,8 +1213,9 @@ button{font-family:var(--fb)}
         <div class="orl">or sign in with</div>
         <button class="gbtn" onclick="doGoogle()">
           <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-          Continue with Google
+          Continue with Google →
         </button>
+        <p style="font-size:.74rem;color:var(--g500);text-align:center;margin-top:4px">You will be redirected to Google to sign in</p>
       </div>
     </div>
     <!-- REGISTER -->
@@ -1133,8 +1233,9 @@ button{font-family:var(--fb)}
         <div class="orl">or sign up with</div>
         <button class="gbtn" onclick="doGoogle()">
           <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-          Sign up with Google
+          Sign up with Google →
         </button>
+        <p style="font-size:.74rem;color:var(--g500);text-align:center;margin-top:4px">You will be redirected to Google to sign in</p>
       </div>
     </div>
   </div>
@@ -1299,70 +1400,27 @@ function doReg(){
   });
 }
 
-// ── GOOGLE LOGIN ──
-// Tries popup first. If blocked or on mobile, falls back to redirect.
+// ── GOOGLE LOGIN — redirect only (no popup, works everywhere) ──
 function doGoogle(){
   fb(async()=>{
-    clrStat();
     const isLoginTab = document.getElementById('loginWrap').style.display !== 'none';
-    const statId = isLoginTab ? 'lStat' : 'rStat';
-    setStat(statId, '⏳ Opening Google sign-in...', '');
-
-    try{
-      // ── Try popup first ──
-      const result = await window._fb.signInWithPopup(window._fb.auth, window._fb.gp);
-      const user = result.user;
-
-      // Save to Firestore
+    const sid = isLoginTab ? 'lStat' : 'rStat';
+    setStat(sid,'⏳ Redirecting you to Google...','');
+    // Small delay so user sees the message, then redirect
+    setTimeout(async ()=>{
       try{
-        const uref = window._fb.doc(window._fb.db,'users',user.uid);
-        const snap = await window._fb.getDoc(uref);
-        const parts = (user.displayName||'').split(' ');
-        if(!snap.exists()){
-          await window._fb.setDoc(uref,{
-            firstName: parts[0]||'', lastName: parts.slice(1).join(' ')||'',
-            displayName: user.displayName||user.email,
-            email: user.email, photo: user.photoURL||'',
-            provider: 'google', createdAt: window._fb.serverTimestamp()
-          });
-        } else {
-          await window._fb.setDoc(uref,{
-            photo: user.photoURL||'',
-            displayName: user.displayName||user.email,
-            lastLogin: window._fb.serverTimestamp()
-          },{ merge:true });
-        }
-      } catch(dbErr){ console.log('Firestore (non-fatal):',dbErr); }
-
-      setStat(statId,'✅ Signed in with Google!','ok');
-      setTimeout(()=>{ closeLogin(); go('profile'); }, 900);
-
-    } catch(e){
-      console.error('Google popup error:',e.code, e.message);
-
-      // If popup was blocked → silently fall back to redirect (page reload)
-      if(e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user'){
-        setStat(statId,'🔄 Popup blocked — redirecting to Google...','');
-        try{
-          await window._fb.signInWithRedirect(window._fb.auth, window._fb.gp);
-          // Page will reload; getRedirectResult() at top handles completion
-          return;
-        } catch(re){
-          setStat(statId,'Google sign-in failed. Please use email login.','err');
-          return;
-        }
+        await window._fb.signInWithRedirect(window._fb.auth, window._fb.gp);
+        // Browser will leave this page and come back — getRedirectResult handles the rest
+      } catch(e){
+        console.error('Redirect error:',e);
+        const msgs = {
+          'auth/unauthorized-domain': '⚠️ Add your GitHub Pages domain in Firebase Console → Authentication → Authorized Domains.',
+          'auth/operation-not-allowed': '⚠️ Enable Google sign-in in Firebase Console → Authentication → Sign-in methods.',
+          'auth/network-request-failed': 'Network error. Check your internet connection.'
+        };
+        setStat(sid, msgs[e.code] || 'Could not start Google sign-in. Please use email login.', 'err');
       }
-
-      // All other errors
-      const msgs = {
-        'auth/cancelled-popup-request': 'Another sign-in is already in progress.',
-        'auth/network-request-failed':  'Network error. Check your internet connection.',
-        'auth/unauthorized-domain':     '⚠️ Domain not authorized. Go to Firebase Console → Authentication → Settings → Authorized Domains and add your GitHub Pages URL.',
-        'auth/operation-not-allowed':   '⚠️ Google sign-in is not enabled. Enable it in Firebase Console → Authentication → Sign-in methods.',
-        'auth/internal-error':          'Internal error. Please try again in a moment.',
-      };
-      setStat(statId, msgs[e.code] || 'Google sign-in failed. Please use email login instead.', 'err');
-    }
+    }, 600);
   });
 }
 
