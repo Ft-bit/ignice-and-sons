@@ -4,23 +4,30 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta name="description" content="IG NICE & SONS — Enugu's most trusted Mouka Foam distributor. No. 4 Old Oturukpo Road, Obollo-Afor, Enugu State."/>
+<meta property="og:title" content="IG NICE & SONS | Premium Mouka Foam — Obollo-Afor, Enugu"/>
+<meta property="og:description" content="Enugu's trusted Mouka Foam distributor. Best prices, fast delivery, 100% authentic Mouka products."/>
 <title>IG NICE & SONS | Premium Mouka Foam — Obollo-Afor, Enugu</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23006738'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' fill='white' font-size='13' font-weight='900' font-family='Georgia'>IG</text></svg>"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 
-<!-- Firebase SDKs -->
+<!-- ══════════════════════════════════════
+     FIREBASE — YOUR REAL CONFIG
+══════════════════════════════════════ -->
 <script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-  import { getAuth, GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword,
-           signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile }
-    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-  import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp, doc, updateDoc, getDoc, setDoc }
-    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { initializeApp }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup,
+  createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  signOut, onAuthStateChanged, updateProfile, sendPasswordResetEmail
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import {
+  getFirestore, collection, addDoc, getDocs, query,
+  orderBy, serverTimestamp, doc, updateDoc, getDoc, setDoc
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-  // ── FIREBASE CONFIG ── (replace with your own Firebase project config)
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyDsY53Imzxz72aJG9lBLcj32oqGRC6jj7c",
   authDomain: "ignice-and-sons.firebaseapp.com",
@@ -31,381 +38,480 @@ const firebaseConfig = {
   measurementId: "G-5M4QLF2F4P"
 };
 
-  const app  = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db   = getFirestore(app);
-  const gprov = new GoogleAuthProvider();
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+const gp   = new GoogleAuthProvider();
+gp.addScope('email');
+gp.addScope('profile');
+gp.setCustomParameters({ prompt: 'select_account' });
 
-  // Expose to window so inline JS can call
-  window._fb = { auth, db, gprov, GoogleAuthProvider,
-    signInWithPopup, createUserWithEmailAndPassword,
-    signInWithEmailAndPassword, signOut, onAuthStateChanged,
-    updateProfile, collection, addDoc, getDocs, query,
-    orderBy, serverTimestamp, doc, updateDoc, getDoc, setDoc };
+window._fb = {
+  auth, db, gp,
+  signInWithPopup, createUserWithEmailAndPassword,
+  signInWithEmailAndPassword, signOut, updateProfile,
+  sendPasswordResetEmail, collection, addDoc, getDocs,
+  query, orderBy, serverTimestamp, doc, updateDoc,
+  getDoc, setDoc
+};
+window._fbReady = true;
 
-  // Auth state watcher
-  onAuthStateChanged(auth, user => {
-    window._currentUser = user || null;
-    if(typeof window.onUserChange === 'function') window.onUserChange(user);
-  });
+// Track whether auth has resolved at least once
+window._authResolved = false;
+
+onAuthStateChanged(auth, async user => {
+  // Fix missing displayName for Google users
+  if (user && !user.displayName) {
+    const provName = user.providerData?.[0]?.displayName;
+    if (provName) {
+      try { await updateProfile(user, { displayName: provName }); } catch(e){}
+    }
+  }
+  window._user = user || null;
+  window._authResolved = true;
+  if (typeof window._onUser === 'function') window._onUser(user);
+  // If profile page is already showing, re-render it now that we have user
+  if (document.getElementById('pg-profile')?.classList.contains('on')) {
+    if (typeof window._renderProf === 'function') window._renderProf(user);
+  }
+});
 </script>
 
 <style>
+/* ══════════════════════════════
+   CSS VARIABLES & RESET
+══════════════════════════════ */
 :root{
-  --g:#006738;--gd:#004d28;--gm:#00884a;--gl:#e6f4ed;
-  --gold:#c9a84c;--gol:#f0d98e;
-  --w:#fff;--ow:#f8faf9;--g100:#f1f5f1;--g200:#e2ebe2;
-  --g300:#c8d5c8;--g500:#7a8e7a;--g700:#3d4f3d;--bk:#0d1a0d;
-  --ssm:0 2px 12px rgba(0,103,56,.10);
-  --smd:0 8px 32px rgba(0,103,56,.15);
-  --slg:0 24px 64px rgba(0,103,56,.20);
-  --r:14px;--rs:8px;--rl:24px;
-  --ease:cubic-bezier(.4,0,.2,1);--spring:cubic-bezier(.34,1.56,.64,1);
-  --t:all .35s var(--ease);
+  --g:#006738; --gd:#004d28; --gm:#00884a; --gl:#e8f5ee;
+  --gold:#c9a84c; --gol:#f0d98e; --gol2:#fff8e1;
+  --w:#fff; --ow:#f7faf8; --g50:#f0f7f3;
+  --g100:#e8f0e8; --g200:#d4e4d4; --g300:#b8d0b8;
+  --g500:#6b8f6b; --g700:#3a5a3a; --bk:#0d1a0d;
+  --ssm:0 2px 16px rgba(0,103,56,.08);
+  --smd:0 8px 36px rgba(0,103,56,.14);
+  --slg:0 24px 72px rgba(0,103,56,.18);
+  --r:16px; --rs:10px; --rl:26px;
+  --ease:cubic-bezier(.4,0,.2,1);
+  --spring:cubic-bezier(.34,1.56,.64,1);
+  --t:all .3s var(--ease);
   --fd:'Playfair Display',Georgia,serif;
   --fb:'DM Sans',system-ui,sans-serif;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-body{font-family:var(--fb);background:var(--w);color:var(--g700);line-height:1.6;overflow-x:hidden}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:var(--fb);background:var(--ow);color:var(--g700);line-height:1.6;overflow-x:hidden}
 img{max-width:100%;height:auto;display:block}
 a{text-decoration:none;color:inherit}
+button{font-family:var(--fb)}
 ::-webkit-scrollbar{width:5px}
 ::-webkit-scrollbar-thumb{background:var(--g);border-radius:3px}
 
-/* ── ANNOUNCE ── */
-.ab{background:var(--gd);color:var(--gol);text-align:center;padding:9px 16px;font-size:.8rem;font-weight:500;letter-spacing:.04em}
+/* ══════════════════════════════
+   ANNOUNCE BAR
+══════════════════════════════ */
+.ab{background:var(--gd);color:var(--gol);text-align:center;padding:10px 20px;font-size:.8rem;font-weight:500;letter-spacing:.03em}
 .ab a{color:var(--gol);text-decoration:underline}
+.ab strong{color:#fff}
 
-/* ── NAV ── */
-.nav{position:sticky;top:0;z-index:1000;background:rgba(255,255,255,.97);backdrop-filter:blur(20px);border-bottom:1.5px solid var(--gl);transition:var(--t)}
-.nav.sc{box-shadow:var(--smd)}
-.ni{max-width:1280px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:13px 28px;gap:16px}
-.logo{display:flex;align-items:center;gap:11px;text-decoration:none;cursor:pointer}
-.logo-i{width:42px;height:42px;border-radius:10px;background:var(--g);display:flex;align-items:center;justify-content:center;font-family:var(--fd);color:#fff;font-size:.95rem;font-weight:900;flex-shrink:0}
-.logo-t span:first-child{display:block;font-family:var(--fd);font-size:1.05rem;font-weight:900;color:var(--g);letter-spacing:-.02em;line-height:1.1}
-.logo-t span:last-child{display:block;font-size:.67rem;font-weight:500;color:var(--g500);letter-spacing:.07em;text-transform:uppercase}
-.nl{display:flex;align-items:center;gap:4px;list-style:none}
-.nl a{padding:7px 13px;border-radius:var(--rs);font-size:.9rem;font-weight:500;color:var(--g700);transition:var(--t);position:relative;cursor:pointer}
-.nl a::after{content:'';position:absolute;bottom:3px;left:13px;right:13px;height:2px;background:var(--g);border-radius:1px;transform:scaleX(0);transform-origin:center;transition:transform .25s ease}
+/* ══════════════════════════════
+   NAVBAR
+══════════════════════════════ */
+.nav{position:sticky;top:0;z-index:1000;background:rgba(255,255,255,.98);backdrop-filter:blur(24px);border-bottom:1px solid var(--g100);transition:var(--t)}
+.nav.sc{box-shadow:0 4px 24px rgba(0,103,56,.12)}
+.ni{max-width:1300px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 32px;gap:16px}
+.logo{display:flex;align-items:center;gap:12px;cursor:pointer;text-decoration:none}
+.logo-ic{width:44px;height:44px;border-radius:11px;background:var(--g);display:flex;align-items:center;justify-content:center;font-family:var(--fd);color:#fff;font-size:1rem;font-weight:900;flex-shrink:0;box-shadow:0 3px 12px rgba(0,103,56,.30)}
+.logo-tx span:first-child{display:block;font-family:var(--fd);font-size:1.08rem;font-weight:900;color:var(--g);letter-spacing:-.02em;line-height:1.1}
+.logo-tx span:last-child{display:block;font-size:.64rem;font-weight:600;color:var(--g500);letter-spacing:.08em;text-transform:uppercase}
+.nl{display:flex;align-items:center;gap:2px;list-style:none}
+.nl a{padding:7px 14px;border-radius:var(--rs);font-size:.88rem;font-weight:500;color:var(--g700);transition:var(--t);cursor:pointer;position:relative}
+.nl a::after{content:'';position:absolute;bottom:4px;left:14px;right:14px;height:2px;background:var(--g);border-radius:1px;transform:scaleX(0);transform-origin:center;transition:transform .22s ease}
 .nl a:hover{color:var(--g)}.nl a:hover::after{transform:scaleX(1)}
 .na{display:flex;align-items:center;gap:10px}
-.btn-gh{padding:8px 17px;border:1.5px solid var(--g);border-radius:var(--rs);color:var(--g);font-size:.88rem;font-weight:600;background:transparent;transition:var(--t);cursor:pointer;font-family:var(--fb)}
-.btn-gh:hover{background:var(--gl)}
-.btn-pr{padding:9px 20px;background:var(--g);border:none;border-radius:var(--rs);color:#fff;font-size:.88rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:var(--t);font-family:var(--fb);box-shadow:0 3px 14px rgba(0,103,56,.28);text-decoration:none}
-.btn-pr:hover{background:var(--gm);transform:translateY(-1px)}
-/* Profile nav button */
-.profile-nav-btn{display:flex;align-items:center;gap:8px;padding:7px 14px;border-radius:var(--rs);background:var(--gl);border:1.5px solid var(--g);cursor:pointer;font-family:var(--fb);font-size:.88rem;font-weight:600;color:var(--g);transition:var(--t)}
-.profile-nav-btn:hover{background:var(--g);color:#fff}
-.profile-nav-btn .pav{width:26px;height:26px;border-radius:50%;background:var(--g);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700}
-.profile-nav-btn img{width:26px;height:26px;border-radius:50%;object-fit:cover}
-.ham{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:5px;background:none;border:none}
-.ham span{width:23px;height:2px;background:var(--g);border-radius:2px;transition:var(--t);display:block}
+
+/* Profile Nav Button */
+.prof-btn{display:flex;align-items:center;gap:9px;padding:8px 16px;border-radius:100px;background:var(--gl);border:1.5px solid var(--g200);cursor:pointer;font-size:.86rem;font-weight:600;color:var(--g);transition:var(--t);white-space:nowrap}
+.prof-btn:hover{background:var(--g);color:#fff;border-color:var(--g)}
+.prof-btn:hover .pav-sm{background:rgba(255,255,255,.3);color:#fff}
+.pav-sm{width:28px;height:28px;border-radius:50%;background:var(--g);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;overflow:hidden;flex-shrink:0}
+.pav-sm img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+
+/* Buy Right btn */
+.btn-buy{padding:10px 22px;background:var(--g);border:none;border-radius:100px;color:#fff;font-size:.88rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:var(--t);box-shadow:0 3px 14px rgba(0,103,56,.30);text-decoration:none}
+.btn-buy:hover{background:var(--gm);transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,103,56,.38)}
+
+/* Login ghost btn */
+.btn-login{padding:9px 18px;border:1.5px solid var(--g);border-radius:100px;color:var(--g);font-size:.86rem;font-weight:600;background:transparent;cursor:pointer;transition:var(--t)}
+.btn-login:hover{background:var(--gl)}
+
+/* Hamburger */
+.ham{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:6px;background:none;border:none}
+.ham span{width:22px;height:2px;background:var(--g);border-radius:2px;transition:var(--t);display:block}
 .ham.op span:nth-child(1){transform:rotate(45deg) translate(5px,5px)}
 .ham.op span:nth-child(2){opacity:0;transform:scaleX(0)}
 .ham.op span:nth-child(3){transform:rotate(-45deg) translate(5px,-5px)}
 
-/* ── MOBILE NAV ── */
+/* ══════════════════════════════
+   MOBILE NAV
+══════════════════════════════ */
 .mnav{display:none;position:fixed;inset:0;z-index:9999;background:var(--w);flex-direction:column}
-.mnav.op{display:flex;animation:slideIn .32s var(--spring)}
+.mnav.op{display:flex;animation:slideIn .3s var(--spring)}
 @keyframes slideIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}
 .mnh{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--g100)}
-.mnc{background:none;border:none;font-size:1.8rem;cursor:pointer;color:var(--g500)}
-.mnav ul{list-style:none;padding:10px 0;flex:1;overflow-y:auto}
-.mnav ul a{display:flex;align-items:center;gap:10px;padding:15px 24px;font-size:1.05rem;font-weight:600;color:var(--g700);border-bottom:1px solid var(--g100);transition:background .2s;cursor:pointer}
+.mnc{background:none;border:none;font-size:1.8rem;cursor:pointer;color:var(--g500);line-height:1}
+.mnav ul{list-style:none;padding:8px 0;flex:1;overflow-y:auto}
+.mnav ul a{display:flex;align-items:center;gap:12px;padding:14px 24px;font-size:1rem;font-weight:600;color:var(--g700);border-bottom:1px solid var(--g100);cursor:pointer;transition:background .2s}
 .mnav ul a:hover{background:var(--gl);color:var(--g)}
 .mnf{padding:20px 24px;display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--g100)}
 
-/* ── PAGES SYSTEM ── */
-.page{display:none;min-height:60vh}
-.page.active{display:block}
+/* ══════════════════════════════
+   PAGE SYSTEM
+══════════════════════════════ */
+.pg{display:none}.pg.on{display:block}
 
-/* ── HERO ── */
-.hero{position:relative;overflow:hidden;min-height:88vh;background:var(--gd);display:flex;align-items:center}
-.hbg{position:absolute;inset:0;z-index:0;background:radial-gradient(ellipse 70% 80% at 15% 55%,rgba(0,136,74,.40) 0%,transparent 60%),radial-gradient(ellipse 50% 60% at 85% 15%,rgba(201,168,76,.18) 0%,transparent 50%)}
-.hgrid{position:absolute;inset:0;z-index:0;opacity:.06;background-image:linear-gradient(rgba(255,255,255,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.5) 1px,transparent 1px);background-size:40px 40px}
-.hin{position:relative;z-index:1;max-width:1280px;margin:0 auto;width:100%;padding:80px 28px;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:60px}
-.hbadge{display:inline-flex;align-items:center;gap:8px;background:rgba(201,168,76,.18);border:1px solid rgba(201,168,76,.40);border-radius:100px;padding:6px 16px;font-size:.78rem;font-weight:700;color:var(--gol);letter-spacing:.07em;text-transform:uppercase;margin-bottom:22px}
-.bdot{width:7px;height:7px;border-radius:50%;background:var(--gold);animation:pulse 2.2s infinite}
-@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.7);opacity:.5}}
-.ht h1{font-family:var(--fd);font-size:clamp(2.4rem,5vw,4.4rem);font-weight:900;color:#fff;line-height:1.07;letter-spacing:-.03em;margin-bottom:22px}
+/* ══════════════════════════════
+   HERO
+══════════════════════════════ */
+.hero{position:relative;overflow:hidden;min-height:90vh;background:linear-gradient(135deg,#003d20 0%,var(--gd) 50%,#005530 100%);display:flex;align-items:center}
+.hbg{position:absolute;inset:0;z-index:0}
+.hbg::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 80% at 20% 55%,rgba(0,150,80,.38) 0%,transparent 60%),radial-gradient(ellipse 50% 50% at 85% 15%,rgba(201,168,76,.16) 0%,transparent 50%)}
+.hgrid{position:absolute;inset:0;opacity:.05;background-image:linear-gradient(rgba(255,255,255,.6) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.6) 1px,transparent 1px);background-size:44px 44px}
+.hin{position:relative;z-index:1;max-width:1300px;margin:0 auto;width:100%;padding:90px 32px;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:70px}
+.hbadge{display:inline-flex;align-items:center;gap:9px;background:rgba(201,168,76,.16);border:1px solid rgba(201,168,76,.35);border-radius:100px;padding:7px 18px;font-size:.75rem;font-weight:700;color:var(--gol);letter-spacing:.08em;text-transform:uppercase;margin-bottom:24px}
+.bdot{width:7px;height:7px;border-radius:50%;background:var(--gold);animation:bdot 2.2s infinite}
+@keyframes bdot{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.8);opacity:.4}}
+.ht h1{font-family:var(--fd);font-size:clamp(2.4rem,4.5vw,4.6rem);font-weight:900;color:#fff;line-height:1.06;letter-spacing:-.03em;margin-bottom:22px}
 .ht h1 em{font-style:normal;color:var(--gol);position:relative;display:inline-block}
-.ht h1 em::after{content:'';position:absolute;bottom:-3px;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold),transparent);border-radius:2px}
-.ht p{font-size:1.05rem;color:rgba(255,255,255,.75);max-width:470px;line-height:1.75;margin-bottom:36px}
+.ht h1 em::after{content:'';position:absolute;bottom:-4px;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold),transparent);border-radius:2px}
+.ht p{font-size:1.05rem;color:rgba(255,255,255,.75);max-width:460px;line-height:1.78;margin-bottom:38px}
 .hcta{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.btn-h{padding:15px 30px;background:var(--gold);border:none;border-radius:var(--rs);color:var(--gd);font-size:.97rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:10px;transition:var(--t);font-family:var(--fb);box-shadow:0 6px 24px rgba(201,168,76,.45);text-decoration:none}
-.btn-h:hover{background:var(--gol);transform:translateY(-2px)}
-.btn-ho{padding:14px 26px;border:2px solid rgba(255,255,255,.38);border-radius:var(--rs);color:#fff;font-size:.92rem;font-weight:600;cursor:pointer;background:transparent;transition:var(--t);font-family:var(--fb);display:inline-flex;align-items:center;gap:8px;text-decoration:none}
-.btn-ho:hover{border-color:#fff;background:rgba(255,255,255,.09)}
-.htr{display:flex;align-items:center;gap:20px;margin-top:44px;padding-top:32px;border-top:1px solid rgba(255,255,255,.12);flex-wrap:wrap}
-.ti strong{display:block;font-family:var(--fd);font-size:1.6rem;font-weight:900;color:var(--gol);line-height:1}
-.ti span{font-size:.7rem;font-weight:500;color:rgba(255,255,255,.50);letter-spacing:.06em;text-transform:uppercase}
-.ts{width:1px;height:34px;background:rgba(255,255,255,.14);flex-shrink:0}
+.btn-hero{padding:16px 32px;background:var(--gold);border:none;border-radius:100px;color:var(--gd);font-size:.97rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:10px;transition:var(--t);box-shadow:0 6px 28px rgba(201,168,76,.45);text-decoration:none}
+.btn-hero:hover{background:var(--gol);transform:translateY(-2px);box-shadow:0 10px 36px rgba(201,168,76,.55)}
+.btn-hout{padding:14px 28px;border:2px solid rgba(255,255,255,.35);border-radius:100px;color:#fff;font-size:.9rem;font-weight:600;cursor:pointer;background:transparent;transition:var(--t);display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+.btn-hout:hover{border-color:#fff;background:rgba(255,255,255,.09)}
+.htr{display:flex;align-items:center;gap:22px;margin-top:46px;padding-top:34px;border-top:1px solid rgba(255,255,255,.10);flex-wrap:wrap}
+.ti strong{display:block;font-family:var(--fd);font-size:1.65rem;font-weight:900;color:var(--gol);line-height:1}
+.ti span{font-size:.69rem;font-weight:600;color:rgba(255,255,255,.45);letter-spacing:.07em;text-transform:uppercase}
+.ts{width:1px;height:36px;background:rgba(255,255,255,.12);flex-shrink:0}
 .hv{display:flex;align-items:center;justify-content:center;position:relative}
-.him{position:relative;width:100%;max-width:520px}
-.hbox{width:100%;border-radius:var(--rl);overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.42);aspect-ratio:4/3;background:var(--gl)}
-.hbox img{width:100%;height:100%;object-fit:cover;border-radius:var(--rl)}
-.fc{position:absolute;background:#fff;border-radius:var(--r);padding:13px 16px;box-shadow:var(--slg);display:flex;align-items:center;gap:11px}
-.fc.t{top:-18px;right:-18px;animation:flt 4s ease-in-out infinite}
-.fc.b{bottom:-16px;left:-18px;animation:flt 4s ease-in-out infinite 2s}
-@keyframes flt{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
-.fi{width:36px;height:36px;border-radius:9px;background:var(--gl);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
-.ft strong{display:block;font-size:.84rem;font-weight:700;color:var(--bk)}
+.him{position:relative;width:100%;max-width:530px}
+.hbox{width:100%;border-radius:22px;overflow:hidden;box-shadow:0 36px 90px rgba(0,0,0,.40);aspect-ratio:4/3;background:var(--g)}
+.hbox img{width:100%;height:100%;object-fit:cover;border-radius:22px}
+.fc{position:absolute;background:#fff;border-radius:var(--r);padding:14px 18px;box-shadow:var(--slg);display:flex;align-items:center;gap:12px}
+.fc.t{top:-20px;right:-20px;animation:flt 4s ease-in-out infinite}
+.fc.b{bottom:-18px;left:-20px;animation:flt 4s ease-in-out infinite 2s}
+@keyframes flt{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.fi{width:38px;height:38px;border-radius:10px;background:var(--gl);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+.ft strong{display:block;font-size:.85rem;font-weight:700;color:var(--bk)}
 .ft span{font-size:.72rem;color:var(--g500)}
 
-/* ── TICKER ── */
-.ticker{background:var(--g);padding:11px 0;overflow:hidden}
-.ttrack{display:flex;animation:tick 30s linear infinite;white-space:nowrap}
+/* ══════════════════════════════
+   TICKER
+══════════════════════════════ */
+.ticker{background:var(--g);padding:12px 0;overflow:hidden}
+.ttrack{display:flex;animation:tick 32s linear infinite;white-space:nowrap}
 .ttrack:hover{animation-play-state:paused}
 @keyframes tick{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
-.titem{display:inline-flex;align-items:center;gap:9px;padding:0 28px;font-size:.78rem;font-weight:700;color:#fff;letter-spacing:.06em;text-transform:uppercase}
+.ti2{display:inline-flex;align-items:center;gap:10px;padding:0 30px;font-size:.77rem;font-weight:700;color:#fff;letter-spacing:.06em;text-transform:uppercase}
 .tdot{width:5px;height:5px;border-radius:50%;background:var(--gold);flex-shrink:0}
 
-/* ── SHARED SECTION ── */
-.sw{max-width:1280px;margin:0 auto}
-.eye{text-align:center;font-size:.76rem;font-weight:800;color:var(--g);letter-spacing:.13em;text-transform:uppercase;margin-bottom:10px}
-.stit{text-align:center;font-family:var(--fd);font-size:clamp(1.9rem,3.2vw,2.9rem);font-weight:900;color:var(--bk);line-height:1.14;letter-spacing:-.03em;margin-bottom:12px}
-.ssub{text-align:center;font-size:.97rem;color:var(--g500);max-width:540px;margin:0 auto 56px;line-height:1.7}
+/* ══════════════════════════════
+   SHARED
+══════════════════════════════ */
+.sw{max-width:1300px;margin:0 auto}
+.eye{text-align:center;font-size:.74rem;font-weight:800;color:var(--g);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px}
+.stit{text-align:center;font-family:var(--fd);font-size:clamp(1.9rem,3vw,2.9rem);font-weight:900;color:var(--bk);line-height:1.12;letter-spacing:-.03em;margin-bottom:14px}
+.ssub{text-align:center;font-size:.96rem;color:var(--g500);max-width:520px;margin:0 auto 56px;line-height:1.72}
+.section-pad{padding:100px 32px}
+.section-pad-sm{padding:72px 32px}
 
-/* ── FEATURES ── */
-.feats{padding:96px 28px;background:var(--ow)}
-.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:22px}
-.fcard{background:#fff;border-radius:var(--r);padding:30px 26px;border:1.5px solid var(--g200);transition:var(--t);position:relative;overflow:hidden}
-.fcard::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--g),var(--gm));transform:scaleX(0);transform-origin:left;transition:transform .4s ease}
-.fcard:hover{transform:translateY(-6px);box-shadow:var(--smd);border-color:var(--gl)}
-.fcard:hover::before{transform:scaleX(1)}
-.ficon{width:50px;height:50px;background:var(--gl);border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin-bottom:18px}
-.fcard h3{font-size:1rem;font-weight:700;color:var(--bk);margin-bottom:7px}
-.fcard p{font-size:.86rem;color:var(--g500);line-height:1.6}
+/* ══════════════════════════════
+   FEATURES
+══════════════════════════════ */
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(218px,1fr));gap:22px}
+.fcard{background:#fff;border-radius:var(--r);padding:30px 26px;border:1px solid var(--g100);transition:var(--t);position:relative;overflow:hidden}
+.fcard::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--g),var(--gm));transform:scaleX(0);transform-origin:left;transition:transform .4s ease}
+.fcard:hover{transform:translateY(-6px);box-shadow:var(--smd);border-color:var(--g200)}
+.fcard:hover::after{transform:scaleX(1)}
+.fic{width:52px;height:52px;background:var(--gl);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:18px}
+.fcard h3{font-size:.98rem;font-weight:700;color:var(--bk);margin-bottom:8px}
+.fcard p{font-size:.85rem;color:var(--g500);line-height:1.62}
 
-/* ── PRODUCTS ── */
-.prods{padding:96px 28px;background:#fff}
+/* ══════════════════════════════
+   PRODUCTS
+══════════════════════════════ */
 .ptabs{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:48px}
-.ptab{padding:8px 18px;border-radius:100px;border:1.5px solid var(--g300);background:transparent;font-size:.86rem;font-weight:600;color:var(--g500);cursor:pointer;transition:var(--t);font-family:var(--fb)}
+.ptab{padding:8px 20px;border-radius:100px;border:1.5px solid var(--g300);background:transparent;font-size:.85rem;font-weight:600;color:var(--g500);cursor:pointer;transition:var(--t)}
 .ptab.on,.ptab:hover{background:var(--g);border-color:var(--g);color:#fff}
-.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(265px,1fr));gap:26px}
-.pc{background:#fff;border-radius:var(--rl);overflow:hidden;border:1.5px solid var(--g100);transition:var(--t)}
-.pc:hover{transform:translateY(-8px);box-shadow:var(--slg);border-color:var(--gl)}
-.pimg{position:relative;overflow:hidden;aspect-ratio:4/3;background:var(--g100)}
-.pimg img{width:100%;height:100%;object-fit:cover;transition:transform .55s ease}
-.pc:hover .pimg img{transform:scale(1.07)}
-.pbadge{position:absolute;top:10px;left:10px;background:var(--gold);color:var(--gd);border-radius:100px;padding:3px 11px;font-size:.69rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;z-index:2}
-.pbadge.new{background:var(--g);color:#fff}.pbadge.hot{background:#e74c3c;color:#fff}
-.pov{position:absolute;inset:0;background:rgba(0,71,38,.92);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;opacity:0;transition:opacity .3s ease;z-index:3}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:28px}
+.pc{background:#fff;border-radius:20px;overflow:hidden;border:1px solid var(--g100);transition:var(--t)}
+.pc:hover{transform:translateY(-8px);box-shadow:var(--slg);border-color:var(--g200)}
+.pim{position:relative;overflow:hidden;aspect-ratio:4/3;background:var(--g100)}
+.pim img{width:100%;height:100%;object-fit:cover;transition:transform .55s ease}
+.pc:hover .pim img{transform:scale(1.07)}
+.pbg{position:absolute;top:11px;left:11px;border-radius:100px;padding:4px 12px;font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;z-index:2}
+.pbg.bs{background:var(--gold);color:var(--gd)}.pbg.nw{background:var(--g);color:#fff}.pbg.ht{background:#e74c3c;color:#fff}
+.pov{position:absolute;inset:0;background:rgba(0,60,30,.90);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;opacity:0;transition:opacity .3s;z-index:3}
 .pc:hover .pov{opacity:1}
-.pov .pr{font-family:var(--fd);font-size:1.75rem;font-weight:900;color:var(--gol)}
-.pov small{color:rgba(255,255,255,.70);font-size:.8rem}
-.povbtn{margin-top:8px;padding:9px 22px;background:#fff;border-radius:var(--rs);color:var(--g);font-weight:700;font-size:.88rem;border:none;cursor:pointer;transition:var(--t);font-family:var(--fb)}
-.povbtn:hover{background:var(--gold);color:var(--gd)}
-.pinfo{padding:18px}
-.pinfo h3{font-size:.97rem;font-weight:700;color:var(--bk);margin-bottom:4px}
-.pinfo p{font-size:.82rem;color:var(--g500);line-height:1.5;margin-bottom:12px}
+.pov .pprice{font-family:var(--fd);font-size:1.8rem;font-weight:900;color:var(--gol)}
+.pov small{color:rgba(255,255,255,.65);font-size:.8rem}
+.pov-btn{margin-top:8px;padding:10px 24px;background:#fff;border-radius:100px;color:var(--g);font-weight:700;font-size:.88rem;border:none;cursor:pointer;transition:var(--t)}
+.pov-btn:hover{background:var(--gold);color:var(--gd)}
+.pin{padding:18px 20px}
+.pin h3{font-size:.96rem;font-weight:700;color:var(--bk);margin-bottom:5px}
+.pin p{font-size:.82rem;color:var(--g500);line-height:1.52;margin-bottom:13px}
 .pmeta{display:flex;align-items:center;justify-content:space-between}
-.pst{color:var(--gold);font-size:.82rem}
-.ppr{font-family:var(--fd);font-size:1.12rem;font-weight:900;color:var(--g)}
+.pstar{color:var(--gold);font-size:.82rem}.pprc{font-family:var(--fd);font-size:1.1rem;font-weight:900;color:var(--g)}
 
-/* ── ABOUT ── */
-.about-s{background:var(--g);padding:88px 28px;position:relative;overflow:hidden}
-.about-s::before{content:'';position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M40 0L80 40L40 80L0 40Z'/%3E%3C/g%3E%3C/svg%3E")}
-.ain{position:relative;z-index:1;max-width:1280px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:center}
+/* ══════════════════════════════
+   ABOUT STRIP
+══════════════════════════════ */
+.about-strip{background:linear-gradient(135deg,var(--g) 0%,var(--gm) 100%);padding:96px 32px;position:relative;overflow:hidden}
+.about-strip::before{content:'';position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M40 0L80 40L40 80L0 40Z'/%3E%3C/g%3E%3C/svg%3E")}
+.ain{position:relative;z-index:1;max-width:1300px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:72px;align-items:center}
 .ac .eye{text-align:left;color:var(--gol)}
-.ac h2{font-family:var(--fd);font-size:clamp(1.9rem,3vw,2.7rem);font-weight:900;color:#fff;line-height:1.14;letter-spacing:-.03em;margin-bottom:18px}
+.ac h2{font-family:var(--fd);font-size:clamp(1.9rem,3vw,2.8rem);font-weight:900;color:#fff;line-height:1.12;letter-spacing:-.03em;margin-bottom:18px}
 .ac h2 em{font-style:normal;color:var(--gol)}
-.ac p{font-size:.96rem;color:rgba(255,255,255,.78);line-height:1.75;margin-bottom:14px}
-.alist{list-style:none;margin:22px 0 30px}
-.alist li{display:flex;align-items:flex-start;gap:11px;font-size:.93rem;color:rgba(255,255,255,.83);padding:9px 0;border-bottom:1px solid rgba(255,255,255,.08)}
-.chk{width:20px;height:20px;min-width:20px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:.66rem;color:var(--gd);font-weight:900;margin-top:1px}
-.btn-ab{padding:13px 28px;background:var(--gold);border:none;border-radius:var(--rs);color:var(--gd);font-weight:800;font-size:.93rem;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:var(--t);font-family:var(--fb);text-decoration:none}
-.btn-ab:hover{background:var(--gol);transform:translateY(-2px)}
-.astats{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.astat{background:rgba(255,255,255,.09);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.14);border-radius:var(--r);padding:26px;transition:var(--t)}
-.astat:hover{background:rgba(255,255,255,.13);transform:translateY(-3px)}
-.astat strong{display:block;font-family:var(--fd);font-size:2.3rem;font-weight:900;color:var(--gol);line-height:1;margin-bottom:6px}
-.astat span{font-size:.78rem;color:rgba(255,255,255,.60);letter-spacing:.05em;text-transform:uppercase}
+.ac p{font-size:.95rem;color:rgba(255,255,255,.78);line-height:1.76;margin-bottom:14px}
+.alist{list-style:none;margin:22px 0 32px}
+.alist li{display:flex;align-items:flex-start;gap:12px;font-size:.92rem;color:rgba(255,255,255,.84);padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.chk{width:21px;height:21px;min-width:21px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:.65rem;color:var(--gd);font-weight:900;margin-top:1px}
+.btn-team{padding:14px 30px;background:var(--gold);border:none;border-radius:100px;color:var(--gd);font-weight:800;font-size:.93rem;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:var(--t);text-decoration:none}
+.btn-team:hover{background:var(--gol);transform:translateY(-2px)}
+.astats{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.astat{background:rgba(255,255,255,.09);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.12);border-radius:var(--r);padding:28px;transition:var(--t)}
+.astat:hover{background:rgba(255,255,255,.14);transform:translateY(-4px)}
+.astat strong{display:block;font-family:var(--fd);font-size:2.4rem;font-weight:900;color:var(--gol);line-height:1;margin-bottom:7px}
+.astat span{font-size:.76rem;color:rgba(255,255,255,.55);letter-spacing:.06em;text-transform:uppercase}
 
-/* ── REVIEWS SECTION ── */
-.reviews-s{padding:96px 28px;background:var(--ow)}
-.rev-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:22px;margin-bottom:40px}
-.rcard{background:#fff;border-radius:var(--r);padding:28px;border:1.5px solid var(--gl);position:relative;transition:var(--t);overflow:hidden}
-.rcard:hover{box-shadow:var(--smd);transform:translateY(-4px)}
-.rcard::before{content:'\201C';position:absolute;top:10px;right:18px;font-family:var(--fd);font-size:4rem;color:var(--gl);line-height:1;pointer-events:none}
-.rstars{color:var(--gold);font-size:.95rem;margin-bottom:10px}
-.rcard p{font-size:.9rem;color:var(--g700);line-height:1.7;font-style:italic;margin-bottom:16px}
-.rauth{display:flex;align-items:center;gap:10px}
-.rav{width:38px;height:38px;border-radius:50%;background:var(--g);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:.82rem;flex-shrink:0;overflow:hidden}
+/* ══════════════════════════════
+   REVIEWS
+══════════════════════════════ */
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:22px;margin-bottom:44px}
+.rcard{background:#fff;border-radius:var(--r);padding:28px;border:1px solid var(--g100);position:relative;transition:var(--t);overflow:hidden}
+.rcard:hover{box-shadow:var(--smd);transform:translateY(-4px);border-color:var(--g200)}
+.rcard::before{content:'\201C';position:absolute;top:8px;right:18px;font-family:var(--fd);font-size:4rem;color:var(--gl);line-height:1;pointer-events:none}
+.rsts{color:var(--gold);font-size:.92rem;margin-bottom:10px;letter-spacing:2px}
+.rcard p{font-size:.9rem;color:var(--g700);line-height:1.72;font-style:italic;margin-bottom:16px}
+.rath{display:flex;align-items:center;gap:11px}
+.rav{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--g),var(--gm));display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:.84rem;flex-shrink:0;overflow:hidden}
 .rav img{width:100%;height:100%;object-fit:cover}
-.ran{font-size:.88rem;font-weight:700;color:var(--bk)}
+.ran{font-size:.88rem;font-weight:700;color:var(--bk);margin-bottom:2px}
 .ral{font-size:.74rem;color:var(--g500)}
-.rdate{font-size:.72rem;color:var(--g500);margin-left:auto}
+.rdt{font-size:.72rem;color:var(--g300);margin-left:auto}
 
-/* Review Write Box */
-.rev-write{background:#fff;border-radius:var(--r);padding:32px;border:2px solid var(--gl);max-width:600px;margin:0 auto}
-.rev-write h3{font-family:var(--fd);font-size:1.2rem;font-weight:900;color:var(--bk);margin-bottom:6px}
-.rev-write p{font-size:.85rem;color:var(--g500);margin-bottom:20px}
-.star-pick{display:flex;gap:6px;margin-bottom:16px}
-.star-pick span{font-size:1.8rem;cursor:pointer;transition:transform .15s;line-height:1}
-.star-pick span:hover{transform:scale(1.2)}
-.star-pick span.sel{filter:drop-shadow(0 0 4px rgba(201,168,76,.6))}
-.rev-locked{text-align:center;padding:24px}
-.rev-locked p{color:var(--g500);font-size:.9rem;margin-bottom:14px}
+/* Write Review Box */
+.rev-box{background:#fff;border-radius:var(--r);padding:34px;border:2px solid var(--g200);max-width:620px;margin:0 auto 48px;box-shadow:var(--ssm)}
+.rev-box h3{font-family:var(--fd);font-size:1.25rem;font-weight:900;color:var(--bk);margin-bottom:6px}
+.rev-box>p{font-size:.85rem;color:var(--g500);margin-bottom:22px}
+.star-row{display:flex;gap:7px;margin-bottom:18px}
+.star-row span{font-size:2rem;cursor:pointer;transition:transform .15s;line-height:1;color:var(--g300)}
+.star-row span.on{color:var(--gold)}
+.star-row span:hover{transform:scale(1.25)}
+.rev-locked{text-align:center;padding:30px 20px}
+.rev-locked p{color:var(--g500);font-size:.92rem;margin-bottom:16px}
 
-/* ── CTA ── */
-.cta-s{background:var(--gd);padding:80px 28px;text-align:center;position:relative;overflow:hidden}
-.cta-s::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(0,136,74,.5) 0%,transparent 70%)}
-.cta-s h2{position:relative;font-family:var(--fd);font-size:clamp(1.9rem,4vw,3.4rem);font-weight:900;color:#fff;letter-spacing:-.03em;line-height:1.1;margin-bottom:15px}
-.cta-s p{position:relative;font-size:1.02rem;color:rgba(255,255,255,.72);max-width:500px;margin:0 auto 34px;line-height:1.7}
-.ctabtns{position:relative;display:flex;align-items:center;justify-content:center;gap:13px;flex-wrap:wrap}
+/* ══════════════════════════════
+   CTA BANNER
+══════════════════════════════ */
+.cta-s{background:var(--gd);padding:84px 32px;text-align:center;position:relative;overflow:hidden}
+.cta-s::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(0,150,80,.45) 0%,transparent 70%)}
+.cta-s h2{position:relative;font-family:var(--fd);font-size:clamp(2rem,4vw,3.4rem);font-weight:900;color:#fff;letter-spacing:-.03em;line-height:1.08;margin-bottom:16px}
+.cta-s p{position:relative;font-size:1rem;color:rgba(255,255,255,.70);max-width:480px;margin:0 auto 36px;line-height:1.72}
+.cta-btns{position:relative;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}
 
-/* ── CONTACT SECTION ── */
-.contact-s{padding:96px 28px;background:#fff}
-.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:start;margin-top:50px}
-.cinfo h3{font-family:var(--fd);font-size:1.45rem;font-weight:900;color:var(--bk);margin-bottom:14px}
-.cinfo>p{font-size:.94rem;color:var(--g500);line-height:1.7;margin-bottom:26px}
-.ci{display:flex;gap:13px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--g100)}
-.cion{width:38px;height:38px;min-width:38px;background:var(--gl);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem}
+/* ══════════════════════════════
+   CONTACT
+══════════════════════════════ */
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:72px;align-items:start;margin-top:54px}
+.cinfo h3{font-family:var(--fd);font-size:1.5rem;font-weight:900;color:var(--bk);margin-bottom:14px}
+.cinfo>p{font-size:.93rem;color:var(--g500);line-height:1.72;margin-bottom:28px}
+.ci{display:flex;gap:14px;align-items:flex-start;padding:15px 0;border-bottom:1px solid var(--g100)}
+.cion{width:40px;height:40px;min-width:40px;background:var(--gl);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.05rem}
 .ci strong{display:block;font-size:.86rem;font-weight:700;color:var(--bk)}
 .ci span{font-size:.83rem;color:var(--g500)}
-.cf{display:flex;flex-direction:column;gap:14px}
-.frow{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.cform{display:flex;flex-direction:column;gap:15px}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .fg{display:flex;flex-direction:column;gap:6px}
-.fg label{font-size:.81rem;font-weight:600;color:var(--g700)}
-.fg input,.fg select,.fg textarea{padding:11px 14px;border:1.5px solid var(--g300);border-radius:var(--rs);font-family:var(--fb);font-size:.9rem;color:var(--bk);transition:var(--t);background:#fff;width:100%}
-.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--g);box-shadow:0 0 0 3px rgba(0,103,56,.10)}
+.fg label{font-size:.79rem;font-weight:700;color:var(--g700);text-transform:uppercase;letter-spacing:.05em}
+.fg input,.fg select,.fg textarea{padding:12px 16px;border:1.5px solid var(--g200);border-radius:var(--rs);font-family:var(--fb);font-size:.9rem;color:var(--bk);transition:var(--t);background:#fff;width:100%}
+.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--g);box-shadow:0 0 0 3px rgba(0,103,56,.08)}
 .fg textarea{resize:vertical;min-height:100px}
-.btn-sub{padding:14px;background:var(--g);border:none;border-radius:var(--rs);color:#fff;font-weight:700;font-size:.97rem;cursor:pointer;transition:var(--t);font-family:var(--fb);width:100%}
+.btn-sub{padding:14px;background:var(--g);border:none;border-radius:var(--rs);color:#fff;font-weight:700;font-size:.96rem;cursor:pointer;transition:var(--t);width:100%}
 .btn-sub:hover{background:var(--gm);transform:translateY(-1px)}
+.btn-sub:disabled{opacity:.65;cursor:default;transform:none}
 
-/* ── FAQ PAGE ── */
-.faq-page{padding:80px 28px;max-width:800px;margin:0 auto}
-.faq-page h1{font-family:var(--fd);font-size:2.5rem;font-weight:900;color:var(--bk);margin-bottom:8px;letter-spacing:-.03em}
-.faq-page .sub{color:var(--g500);margin-bottom:48px;font-size:.97rem}
-.faq-item{border:1.5px solid var(--g200);border-radius:var(--r);margin-bottom:12px;overflow:hidden}
-.faq-q{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;cursor:pointer;font-weight:600;font-size:.97rem;color:var(--bk);transition:background .2s}
-.faq-q:hover{background:var(--g100)}
-.faq-q.open{background:var(--gl);color:var(--g)}
-.faq-arrow{font-size:1.1rem;transition:transform .3s;flex-shrink:0}
-.faq-q.open .faq-arrow{transform:rotate(180deg)}
-.faq-a{max-height:0;overflow:hidden;transition:max-height .4s ease,padding .3s ease;font-size:.92rem;color:var(--g700);line-height:1.7;padding:0 22px;background:var(--gl)}
-.faq-a.open{max-height:300px;padding:16px 22px}
+/* ══════════════════════════════
+   FAQ
+══════════════════════════════ */
+.faq-item{border:1px solid var(--g200);border-radius:var(--r);margin-bottom:10px;overflow:hidden;background:#fff}
+.faq-q{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;cursor:pointer;font-weight:600;font-size:.95rem;color:var(--bk);transition:background .2s;gap:12px}
+.faq-q:hover{background:var(--g50)}
+.faq-q.op{background:var(--gl);color:var(--g)}
+.farr{font-size:1rem;transition:transform .3s;flex-shrink:0;color:var(--g500)}
+.faq-q.op .farr{transform:rotate(180deg);color:var(--g)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .38s ease,padding .3s ease;font-size:.9rem;color:var(--g700);line-height:1.72;padding:0 22px;background:var(--g50)}
+.faq-a.op{max-height:300px;padding:16px 22px 20px}
 
-/* ── ABOUT PAGE ── */
-.about-page{padding:80px 28px;max-width:1000px;margin:0 auto}
-.about-page h1{font-family:var(--fd);font-size:2.5rem;font-weight:900;color:var(--bk);margin-bottom:8px;letter-spacing:-.03em}
-.about-page .sub{color:var(--g500);margin-bottom:48px}
-.about-body{display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:start}
-.about-img-b{border-radius:var(--r);overflow:hidden;aspect-ratio:4/3;background:var(--gl)}
-.about-img-b img{width:100%;height:100%;object-fit:cover}
-.about-text h2{font-family:var(--fd);font-size:1.6rem;font-weight:900;color:var(--bk);margin-bottom:14px;letter-spacing:-.02em}
-.about-text p{font-size:.93rem;color:var(--g700);line-height:1.75;margin-bottom:14px}
-.about-vals{margin-top:28px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+/* ══════════════════════════════
+   ABOUT PAGE
+══════════════════════════════ */
+.about-hero{background:linear-gradient(135deg,var(--gd),var(--g));padding:80px 32px;text-align:center;position:relative;overflow:hidden}
+.about-hero::before{content:'';position:absolute;inset:0;opacity:.06;background-image:linear-gradient(rgba(255,255,255,.6) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.6) 1px,transparent 1px);background-size:40px 40px}
+.about-body{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start;padding:72px 32px;max-width:1300px;margin:0 auto}
+.about-img{border-radius:var(--r);overflow:hidden;aspect-ratio:4/3;background:var(--gl)}
+.about-img img{width:100%;height:100%;object-fit:cover}
+.about-vals{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px}
 .aval{background:var(--gl);border-radius:var(--r);padding:18px;border-left:4px solid var(--g)}
-.aval h4{font-size:.9rem;font-weight:700;color:var(--g);margin-bottom:4px}
-.aval p{font-size:.82rem;color:var(--g700);line-height:1.5;margin:0}
+.aval h4{font-size:.88rem;font-weight:700;color:var(--g);margin-bottom:5px}
+.aval p{font-size:.81rem;color:var(--g700);line-height:1.55;margin:0}
+.about-txt h2{font-family:var(--fd);font-size:1.65rem;font-weight:900;color:var(--bk);margin-bottom:16px;letter-spacing:-.02em;line-height:1.2}
+.about-txt p{font-size:.92rem;color:var(--g700);line-height:1.76;margin-bottom:14px}
+.num-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:26px 0}
+.num-card{background:var(--gl);border-radius:var(--r);padding:20px;text-align:center}
+.num-card strong{display:block;font-family:var(--fd);font-size:2rem;color:var(--g);line-height:1;margin-bottom:6px}
+.num-card span{font-size:.75rem;color:var(--g500);text-transform:uppercase;letter-spacing:.06em}
 
-/* ── PROFILE PAGE ── */
-.profile-page{padding:60px 28px;max-width:900px;margin:0 auto}
-.prof-header{display:flex;align-items:center;gap:24px;margin-bottom:40px;padding:32px;background:var(--g);border-radius:var(--rl);position:relative;overflow:hidden}
-.prof-header::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23fff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='15'/%3E%3C/g%3E%3C/svg%3E")}
-.prof-av{width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.2);border:3px solid rgba(255,255,255,.5);display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:1.8rem;font-weight:900;color:#fff;overflow:hidden;flex-shrink:0;position:relative;z-index:1}
-.prof-av img{width:100%;height:100%;object-fit:cover}
-.prof-info{position:relative;z-index:1}
-.prof-info h2{font-family:var(--fd);font-size:1.6rem;font-weight:900;color:#fff;line-height:1.1;margin-bottom:4px}
-.prof-info p{color:rgba(255,255,255,.75);font-size:.88rem}
-.prof-badge{display:inline-block;background:var(--gold);color:var(--gd);border-radius:100px;padding:3px 12px;font-size:.72rem;font-weight:800;margin-top:6px;letter-spacing:.05em}
-.prof-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-.prof-card{background:#fff;border-radius:var(--r);padding:26px;border:1.5px solid var(--g200);transition:var(--t)}
-.prof-card:hover{box-shadow:var(--smd);border-color:var(--gl)}
-.prof-card h3{font-size:.85rem;font-weight:700;color:var(--g);text-transform:uppercase;letter-spacing:.08em;margin-bottom:18px;display:flex;align-items:center;gap:8px}
-.prof-card h3 span{font-size:1.1rem}
-.pfield{margin-bottom:14px}
-.pfield label{font-size:.78rem;font-weight:600;color:var(--g500);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px}
-.pfield input{width:100%;padding:10px 14px;border:1.5px solid var(--g300);border-radius:var(--rs);font-family:var(--fb);font-size:.9rem;color:var(--bk);background:#fff;transition:var(--t)}
-.pfield input:focus{outline:none;border-color:var(--g);box-shadow:0 0 0 3px rgba(0,103,56,.10)}
-.pfield input:disabled{background:var(--g100);color:var(--g500)}
-.btn-save{padding:10px 22px;background:var(--g);border:none;border-radius:var(--rs);color:#fff;font-weight:700;font-size:.88rem;cursor:pointer;transition:var(--t);font-family:var(--fb)}
+/* ══════════════════════════════
+   PROFILE PAGE — POLISHED
+══════════════════════════════ */
+.prof-pg{background:var(--ow);min-height:100vh;padding:0 0 80px}
+.prof-banner{background:linear-gradient(135deg,var(--gd) 0%,var(--g) 60%,var(--gm) 100%);padding:52px 32px 80px;position:relative;overflow:hidden}
+.prof-banner::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle at 80% 50%,rgba(201,168,76,.12) 0%,transparent 50%),url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23fff' fill-opacity='0.04'%3E%3Ccircle cx='30' cy='30' r='20'/%3E%3C/g%3E%3C/svg%3E")}
+.prof-banner-in{position:relative;z-index:1;max-width:1000px;margin:0 auto;display:flex;align-items:center;gap:28px}
+.prof-av-lg{width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.18);border:3px solid rgba(255,255,255,.45);display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:2rem;font-weight:900;color:#fff;overflow:hidden;flex-shrink:0}
+.prof-av-lg img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.prof-name-area h2{font-family:var(--fd);font-size:1.8rem;font-weight:900;color:#fff;line-height:1.1;margin-bottom:5px}
+.prof-name-area p{color:rgba(255,255,255,.70);font-size:.88rem}
+.prof-badge{display:inline-flex;align-items:center;gap:6px;background:var(--gold);color:var(--gd);border-radius:100px;padding:4px 14px;font-size:.72rem;font-weight:800;margin-top:8px;letter-spacing:.05em}
+.prof-content{max-width:1000px;margin:-36px auto 0;padding:0 32px;position:relative;z-index:2}
+.prof-tabs{display:flex;background:#fff;border-radius:var(--r);padding:6px;box-shadow:var(--smd);gap:4px;margin-bottom:28px}
+.ptab2{flex:1;padding:11px;text-align:center;border:none;background:transparent;font-size:.87rem;font-weight:600;color:var(--g500);cursor:pointer;border-radius:10px;transition:var(--t);display:flex;align-items:center;justify-content:center;gap:6px}
+.ptab2.on{background:var(--g);color:#fff;box-shadow:0 3px 14px rgba(0,103,56,.28)}
+.prof-panel{display:none}.prof-panel.on{display:block}
+
+/* Profile cards */
+.pcards{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.pcard{background:#fff;border-radius:var(--r);padding:28px;border:1px solid var(--g100);box-shadow:var(--ssm)}
+.pcard h3{font-size:.82rem;font-weight:800;color:var(--g);text-transform:uppercase;letter-spacing:.09em;margin-bottom:20px;display:flex;align-items:center;gap:7px}
+.pfield{margin-bottom:16px}
+.pfield label{font-size:.76rem;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px}
+.pfield input{width:100%;padding:11px 15px;border:1.5px solid var(--g200);border-radius:var(--rs);font-family:var(--fb);font-size:.9rem;color:var(--bk);background:#fff;transition:var(--t)}
+.pfield input:focus{outline:none;border-color:var(--g);box-shadow:0 0 0 3px rgba(0,103,56,.08)}
+.pfield input:disabled{background:var(--g50);color:var(--g500)}
+.btn-save{padding:11px 24px;background:var(--g);border:none;border-radius:var(--rs);color:#fff;font-weight:700;font-size:.88rem;cursor:pointer;transition:var(--t)}
 .btn-save:hover{background:var(--gm)}
-.prof-menu-list{list-style:none;display:flex;flex-direction:column;gap:4px}
-.pml-item{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:var(--rs);cursor:pointer;transition:background .2s;font-size:.9rem;font-weight:500;color:var(--g700)}
-.pml-item:hover{background:var(--gl);color:var(--g)}
-.pml-item.danger:hover{background:#ffeaea;color:#c0392b}
-.pml-item .pml-icon{width:36px;height:36px;border-radius:9px;background:var(--g100);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
-.pml-item.danger .pml-icon{background:#ffeaea}
-.social-links-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.slink{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--rs);background:var(--g100);text-decoration:none;color:var(--g700);font-size:.85rem;font-weight:600;transition:var(--t)}
-.slink:hover{background:var(--g);color:#fff}
-.slink .si{font-size:1.2rem}
+.ps-msg{font-size:.82rem;font-weight:600;padding:8px 14px;border-radius:var(--rs);margin-top:10px;display:none}
+.ps-msg.ok{background:#d4edda;color:#155724;display:block}
+.ps-msg.err{background:#f8d7da;color:#721c24;display:block}
 
-/* ── FOOTER ── */
-.footer{background:var(--bk);padding:68px 28px 0}
-.fin{max-width:1280px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:48px}
-.fb p{font-size:.86rem;color:rgba(255,255,255,.45);line-height:1.7;margin:14px 0 22px;max-width:270px}
+/* Menu items */
+.pmenu{list-style:none;display:flex;flex-direction:column;gap:4px}
+.pmi{display:flex;align-items:center;gap:13px;padding:14px 16px;border-radius:var(--rs);cursor:pointer;transition:background .2s;font-size:.9rem;font-weight:500;color:var(--g700);border:none;background:transparent;width:100%;text-align:left}
+.pmi:hover{background:var(--gl);color:var(--g)}
+.pmi.danger:hover{background:#fef2f2;color:#dc2626}
+.pmi-ic{width:38px;height:38px;border-radius:10px;background:var(--g50);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+.pmi.danger .pmi-ic{background:#fef2f2}
+.pmi-tx strong{display:block;font-size:.88rem;font-weight:700}
+.pmi-tx small{color:var(--g500);font-size:.78rem}
+
+/* Socials */
+.soc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+.sl{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--rs);background:var(--g50);text-decoration:none;color:var(--g700);font-size:.85rem;font-weight:600;transition:var(--t);border:1px solid var(--g100)}
+.sl:hover{background:var(--g);color:#fff;border-color:var(--g)}
+.sl .si{font-size:1.2rem}
+
+/* Stats mini */
+.stat-mini{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.sm{background:var(--gl);border-radius:var(--rs);padding:18px;text-align:center}
+.sm strong{display:block;font-family:var(--fd);font-size:1.7rem;color:var(--g);line-height:1;margin-bottom:4px}
+.sm span{font-size:.72rem;color:var(--g500);text-transform:uppercase;letter-spacing:.05em}
+.loyalty-box{background:var(--gol2);border-radius:var(--rs);border-left:4px solid var(--gold);padding:16px}
+.loyalty-box strong{font-size:.85rem;color:var(--gd)}
+.loyalty-box p{font-size:.8rem;color:var(--g700);margin-top:4px;line-height:1.5}
+
+/* ══════════════════════════════
+   FOOTER
+══════════════════════════════ */
+.footer{background:#0a160a;padding:68px 32px 0}
+.fin{max-width:1300px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:50px}
+.fb-brand p{font-size:.85rem;color:rgba(255,255,255,.40);line-height:1.72;margin:14px 0 22px;max-width:270px}
 .socs{display:flex;gap:9px}
-.soc{width:36px;height:36px;background:rgba(255,255,255,.08);border-radius:9px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.55);font-size:.82rem;font-weight:700;transition:var(--t);text-decoration:none}
+.soc{width:38px;height:38px;background:rgba(255,255,255,.07);border-radius:10px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.45);font-size:.82rem;font-weight:700;transition:var(--t);text-decoration:none}
 .soc:hover{background:var(--g);color:#fff}
-.fcol h4{font-size:.8rem;font-weight:700;color:rgba(255,255,255,.88);text-transform:uppercase;letter-spacing:.09em;margin-bottom:18px}
+.fcol h4{font-size:.78rem;font-weight:800;color:rgba(255,255,255,.80);text-transform:uppercase;letter-spacing:.10em;margin-bottom:18px}
 .fcol ul{list-style:none;display:flex;flex-direction:column;gap:9px}
-.fcol ul a{font-size:.86rem;color:rgba(255,255,255,.40);transition:color .2s;cursor:pointer}
+.fcol ul a{font-size:.85rem;color:rgba(255,255,255,.38);transition:color .2s;cursor:pointer}
 .fcol ul a:hover{color:var(--gol)}
-.fbot{max-width:1280px;margin:46px auto 0;border-top:1px solid rgba(255,255,255,.07);padding:22px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
-.fbot p{font-size:.78rem;color:rgba(255,255,255,.28)}
+.fbot{max-width:1300px;margin:48px auto 0;border-top:1px solid rgba(255,255,255,.06);padding:24px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.fbot p{font-size:.78rem;color:rgba(255,255,255,.25)}
 .fbot a{color:var(--gol)}
 
-/* ── MODAL ── */
-.overlay{display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,20,10,.85);backdrop-filter:blur(10px);align-items:center;justify-content:center;padding:16px}
+/* ══════════════════════════════
+   LOGIN MODAL
+══════════════════════════════ */
+.overlay{display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,15,5,.88);backdrop-filter:blur(12px);align-items:center;justify-content:center;padding:16px}
 .overlay.on{display:flex}
-.modal{background:#fff;border-radius:var(--rl);padding:40px 38px;width:100%;max-width:440px;position:relative;box-shadow:0 40px 100px rgba(0,0,0,.38);animation:mIn .4s var(--spring);max-height:92vh;overflow-y:auto}
-@keyframes mIn{from{transform:scale(.82) translateY(28px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
-.mc{position:absolute;top:14px;right:16px;background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--g500);line-height:1;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:background .2s}
-.mc:hover{background:var(--g100);color:var(--bk)}
-.mhd{text-align:center;margin-bottom:26px}
-.mi{width:52px;height:52px;border-radius:13px;background:var(--g);display:flex;align-items:center;justify-content:center;font-family:var(--fd);color:#fff;font-size:1.1rem;font-weight:900;margin:0 auto 10px}
-.mhd h2{font-family:var(--fd);font-size:1.35rem;font-weight:900;color:var(--bk)}
-.mhd p{font-size:.83rem;color:var(--g500);margin-top:3px}
-.mtabs{display:flex;background:var(--g100);border-radius:var(--rs);padding:4px;margin-bottom:22px;gap:3px}
-.mtab{flex:1;padding:8px;text-align:center;border:none;background:transparent;font-size:.87rem;font-weight:600;color:var(--g500);cursor:pointer;border-radius:6px;transition:var(--t);font-family:var(--fb)}
+.modal{background:#fff;border-radius:var(--rl);padding:42px 40px;width:100%;max-width:440px;position:relative;box-shadow:0 48px 120px rgba(0,0,0,.36);animation:mIn .4s var(--spring);max-height:92vh;overflow-y:auto}
+@keyframes mIn{from{transform:scale(.82) translateY(30px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.mc{position:absolute;top:14px;right:14px;background:var(--g50);border:none;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;cursor:pointer;color:var(--g500);transition:var(--t)}
+.mc:hover{background:var(--g200);color:var(--bk)}
+.mhd{text-align:center;margin-bottom:28px}
+.mico{width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,var(--g),var(--gm));display:flex;align-items:center;justify-content:center;font-family:var(--fd);color:#fff;font-size:1.15rem;font-weight:900;margin:0 auto 12px;box-shadow:0 6px 20px rgba(0,103,56,.30)}
+.mhd h2{font-family:var(--fd);font-size:1.38rem;font-weight:900;color:var(--bk)}
+.mhd p{font-size:.83rem;color:var(--g500);margin-top:4px}
+.mtabs{display:flex;background:var(--g50);border-radius:var(--rs);padding:4px;margin-bottom:24px;gap:3px}
+.mtab{flex:1;padding:9px;text-align:center;border:none;background:transparent;font-size:.86rem;font-weight:600;color:var(--g500);cursor:pointer;border-radius:8px;transition:var(--t)}
 .mtab.on{background:#fff;color:var(--g);box-shadow:var(--ssm)}
-.mform{display:flex;flex-direction:column;gap:13px}
-.lbtn{padding:12px;background:var(--g);border:none;border-radius:var(--rs);color:#fff;font-weight:700;font-size:.93rem;cursor:pointer;font-family:var(--fb);transition:var(--t);margin-top:4px;width:100%}
+.mform{display:flex;flex-direction:column;gap:14px}
+.lbtn{padding:13px;background:var(--g);border:none;border-radius:var(--rs);color:#fff;font-weight:700;font-size:.93rem;cursor:pointer;transition:var(--t);width:100%}
 .lbtn:hover{background:var(--gm)}
-.lst{padding:10px 14px;border-radius:var(--rs);font-size:.85rem;font-weight:600;text-align:center;display:none;margin-bottom:6px}
+.lbtn:disabled{opacity:.65;cursor:default}
+.lst{padding:11px 14px;border-radius:var(--rs);font-size:.84rem;font-weight:600;text-align:center;display:none;margin-bottom:4px}
 .lst.ok{background:#d4edda;color:#155724;display:block}
 .lst.err{background:#f8d7da;color:#721c24;display:block}
-.orl{text-align:center;font-size:.78rem;color:var(--g500);position:relative;margin:2px 0}
-.orl::before,.orl::after{content:'';position:absolute;top:50%;width:calc(50% - 20px);height:1px;background:var(--g300)}
+.orl{text-align:center;font-size:.77rem;color:var(--g500);position:relative;margin:2px 0}
+.orl::before,.orl::after{content:'';position:absolute;top:50%;width:calc(50% - 18px);height:1px;background:var(--g200)}
 .orl::before{left:0}.orl::after{right:0}
-.gbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;border:1.5px solid var(--g300);border-radius:var(--rs);background:#fff;font-size:.88rem;font-weight:600;color:var(--g700);cursor:pointer;transition:var(--t);font-family:var(--fb)}
-.gbtn:hover{border-color:var(--g);color:var(--g);background:var(--gl)}
-.frg{font-size:.8rem;color:var(--g);text-align:right;cursor:pointer;text-decoration:underline}
+.gbtn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:12px;border:1.5px solid var(--g200);border-radius:var(--rs);background:#fff;font-size:.88rem;font-weight:600;color:var(--g700);cursor:pointer;transition:var(--t)}
+.gbtn:hover{border-color:var(--g);background:var(--gl);color:var(--g)}
+.frg{font-size:.79rem;color:var(--g);text-align:right;cursor:pointer;text-decoration:underline;margin-top:-4px}
 
-/* ── WA FAB ── */
-.wafab{position:fixed;bottom:26px;right:26px;z-index:999;width:54px;height:54px;border-radius:50%;background:#25d366;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(37,211,102,.50);transition:var(--t);text-decoration:none;animation:wap 2.8s ease-in-out infinite}
-@keyframes wap{0%,100%{box-shadow:0 4px 18px rgba(37,211,102,.50)}50%{box-shadow:0 4px 28px rgba(37,211,102,.80),0 0 0 9px rgba(37,211,102,.12)}}
+/* ══════════════════════════════
+   WHATSAPP + BACK TOP
+══════════════════════════════ */
+.wafab{position:fixed;bottom:28px;right:28px;z-index:999;width:56px;height:56px;border-radius:50%;background:#25d366;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(37,211,102,.55);transition:var(--t);text-decoration:none;animation:wap 3s ease-in-out infinite}
+@keyframes wap{0%,100%{box-shadow:0 4px 20px rgba(37,211,102,.55)}50%{box-shadow:0 4px 30px rgba(37,211,102,.85),0 0 0 10px rgba(37,211,102,.10)}}
 .wafab:hover{transform:scale(1.1)}
-.wafab svg{width:27px;height:27px;fill:#fff}
-.bktop{position:fixed;bottom:92px;right:26px;z-index:998;width:42px;height:42px;border-radius:50%;background:var(--g);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;border:none;cursor:pointer;transition:var(--t);box-shadow:var(--ssm);opacity:0;pointer-events:none}
+.wafab svg{width:28px;height:28px;fill:#fff}
+.bktop{position:fixed;bottom:100px;right:28px;z-index:998;width:44px;height:44px;border-radius:50%;background:var(--g);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;border:none;cursor:pointer;transition:var(--t);box-shadow:var(--ssm);opacity:0;pointer-events:none}
 .bktop.sh{opacity:1;pointer-events:all}
 .bktop:hover{background:var(--gm);transform:translateY(-2px)}
 
-/* ── REVEAL ── */
-.r{opacity:0;transform:translateY(32px);transition:opacity .7s ease,transform .7s ease}
-.rl{opacity:0;transform:translateX(-36px);transition:opacity .7s ease,transform .7s ease}
-.rr{opacity:0;transform:translateX(36px);transition:opacity .7s ease,transform .7s ease}
+/* ══════════════════════════════
+   SCROLL REVEAL
+══════════════════════════════ */
+.r{opacity:0;transform:translateY(30px);transition:opacity .65s ease,transform .65s ease}
+.rl{opacity:0;transform:translateX(-34px);transition:opacity .65s ease,transform .65s ease}
+.rr{opacity:0;transform:translateX(34px);transition:opacity .65s ease,transform .65s ease}
 .r.on,.rl.on,.rr.on{opacity:1;transform:none}
 .d1{transition-delay:.10s!important}.d2{transition-delay:.20s!important}
 .d3{transition-delay:.30s!important}.d4{transition-delay:.40s!important}
 .d5{transition-delay:.50s!important}.d6{transition-delay:.60s!important}
 
-/* ── LOADING SPINNER ── */
-.spin{display:inline-block;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle}
-@keyframes spin{to{transform:rotate(360deg)}}
+/* Spinner */
+.spin{display:inline-block;width:16px;height:16px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle;margin-right:4px}
+@keyframes sp{to{transform:rotate(360deg)}}
 
-/* ── RESPONSIVE ── */
+/* ══════════════════════════════
+   RESPONSIVE
+══════════════════════════════ */
 @media(max-width:1024px){
   .hin{grid-template-columns:1fr;text-align:center}
-  .ht p{margin:0 auto 36px}
+  .ht p{margin:0 auto 38px}
   .hcta{justify-content:center}
   .htr{justify-content:center}
-  .hv{margin-top:16px}
+  .hv{margin-top:20px}
   .ain{grid-template-columns:1fr}
   .ac .eye{text-align:center}
   .ac h2{text-align:center}
@@ -413,7 +519,7 @@ a{text-decoration:none;color:inherit}
   .cgrid{grid-template-columns:1fr}
   .fin{grid-template-columns:1fr 1fr}
   .about-body{grid-template-columns:1fr}
-  .prof-grid{grid-template-columns:1fr}
+  .pcards{grid-template-columns:1fr}
 }
 @media(max-width:768px){
   .nl,.na{display:none}
@@ -421,23 +527,27 @@ a{text-decoration:none;color:inherit}
   .fc.t{top:-10px;right:-10px}
   .fc.b{bottom:-10px;left:-10px}
   .frow{grid-template-columns:1fr}
-  .fin{grid-template-columns:1fr;gap:32px}
+  .fin{grid-template-columns:1fr;gap:34px}
   .modal{padding:32px 22px}
   .pgrid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
-  .prof-header{flex-direction:column;text-align:center}
+  .prof-banner-in{flex-direction:column;text-align:center}
+  .prof-content{padding:0 18px}
   .about-vals{grid-template-columns:1fr}
-  .social-links-grid{grid-template-columns:1fr}
+  .num-grid{grid-template-columns:1fr 1fr}
+  .soc-grid{grid-template-columns:1fr}
+  .about-body{padding:50px 18px}
 }
 @media(max-width:480px){
-  .hin{padding:60px 18px}
+  .hin{padding:70px 20px}
   .hcta{flex-direction:column;align-items:stretch}
-  .htr{gap:14px}
-  .ts{display:none}
-  .ctabtns{flex-direction:column;align-items:stretch}
-  .feats,.prods,.reviews-s,.contact-s,.about-s,.cta-s{padding:72px 18px}
+  .htr{gap:16px}.ts{display:none}
+  .cta-btns{flex-direction:column;align-items:stretch}
+  .section-pad{padding:72px 20px}
+  .section-pad-sm{padding:56px 20px}
+  .about-strip{padding:72px 20px}
   .fc{display:none}
+  .prof-tabs{flex-wrap:wrap}
   .mform .frow{grid-template-columns:1fr}
-  .faq-page,.about-page,.profile-page{padding:50px 18px}
 }
 </style>
 </head>
@@ -449,69 +559,69 @@ a{text-decoration:none;color:inherit}
 <!-- NAVBAR -->
 <nav class="nav" id="nav">
   <div class="ni">
-    <div class="logo" onclick="showPage('home')">
-      <div class="logo-i">IG</div>
-      <div class="logo-t">
+    <div class="logo" onclick="go('home')">
+      <div class="logo-ic">IG</div>
+      <div class="logo-tx">
         <span>IG NICE &amp; SONS</span>
         <span>Mouka Foam Distributor — Enugu</span>
       </div>
     </div>
     <ul class="nl">
-      <li><a onclick="showPage('home')">Home</a></li>
-      <li><a onclick="showPage('home');scrollTo('#products')">Products</a></li>
-      <li><a onclick="showPage('about-page')">About Us</a></li>
-      <li><a onclick="showPage('reviews-page')">Reviews</a></li>
-      <li><a onclick="showPage('contact-page')">Contact</a></li>
-      <li><a onclick="showPage('faq-page')">FAQ</a></li>
+      <li><a onclick="go('home')">Home</a></li>
+      <li><a onclick="go('home');later('#products')">Products</a></li>
+      <li><a onclick="go('about')">About Us</a></li>
+      <li><a onclick="go('reviews')">Reviews</a></li>
+      <li><a onclick="go('contact')">Contact</a></li>
+      <li><a onclick="go('faq')">FAQ</a></li>
     </ul>
     <div class="na">
-      <div id="navAuthArea"></div>
-      <a class="btn-pr" href="https://wa.me/2348068522444?text=Good%20day%2C%20I%20will%20be%20needing%20a%20Mouka%20Foam%20product.%20My%20name%20is%20" target="_blank" rel="noopener">
+      <div id="authArea"></div>
+      <a class="btn-buy" href="https://wa.me/2348068522444?text=Good%20day%2C%20I%20will%20be%20needing%20a%20Mouka%20Foam%20product.%20My%20name%20is%20" target="_blank" rel="noopener">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>Buy Right
       </a>
     </div>
-    <button class="ham" id="ham" onclick="toggleNav()"><span></span><span></span><span></span></button>
+    <button class="ham" id="ham" onclick="toggleMnav()"><span></span><span></span><span></span></button>
   </div>
 </nav>
 
 <!-- MOBILE NAV -->
 <div class="mnav" id="mnav">
   <div class="mnh">
-    <div class="logo"><div class="logo-i">IG</div><div class="logo-t"><span>IG NICE &amp; SONS</span><span>Mouka Foam</span></div></div>
-    <button class="mnc" onclick="toggleNav()">&#215;</button>
+    <div class="logo"><div class="logo-ic">IG</div><div class="logo-tx"><span>IG NICE &amp; SONS</span><span>Mouka Foam</span></div></div>
+    <button class="mnc" onclick="toggleMnav()">&#215;</button>
   </div>
   <ul>
-    <li><a onclick="showPage('home');toggleNav()">🏠 Home</a></li>
-    <li><a onclick="showPage('home');scrollTo('#products');toggleNav()">🛏️ Products</a></li>
-    <li><a onclick="showPage('about-page');toggleNav()">🏢 About Us</a></li>
-    <li><a onclick="showPage('reviews-page');toggleNav()">⭐ Reviews</a></li>
-    <li><a onclick="showPage('contact-page');toggleNav()">📞 Contact</a></li>
-    <li><a onclick="showPage('faq-page');toggleNav()">❓ FAQ</a></li>
-    <li><a id="mnProfileLink" onclick="toggleNav()">👤 Login / Profile</a></li>
+    <li><a onclick="go('home');toggleMnav()">🏠 Home</a></li>
+    <li><a onclick="go('home');later('#products');toggleMnav()">🛏️ Products</a></li>
+    <li><a onclick="go('about');toggleMnav()">🏢 About Us</a></li>
+    <li><a onclick="go('reviews');toggleMnav()">⭐ Reviews</a></li>
+    <li><a onclick="go('contact');toggleMnav()">📞 Contact</a></li>
+    <li><a onclick="go('faq');toggleMnav()">❓ FAQ</a></li>
+    <li><a id="mnAuthLink" onclick="toggleMnav()">👤 Login / Profile</a></li>
   </ul>
   <div class="mnf">
-    <a class="btn-pr" href="#products" onclick="toggleNav()" style="justify-content:center;">🛒 Buy Right</a>
+    <a class="btn-buy" href="https://wa.me/2348068522444?text=Good%20day%2C%20I%20will%20be%20needing%20a%20Mouka%20Foam%20product.%20My%20name%20is%20" target="_blank" rel="noopener" style="justify-content:center;">🛒 Buy Right</a>
   </div>
 </div>
 
-<!-- ════════════════════════════════
+<!-- ══════════════════════════════════════
      PAGE: HOME
-════════════════════════════════ -->
-<div id="page-home" class="page active">
+══════════════════════════════════════ -->
+<div id="pg-home" class="pg on">
 
-  <!-- HERO -->
   <section class="hero">
     <div class="hbg"></div><div class="hgrid"></div>
     <div class="hin">
       <div class="ht">
-        <div class="hbadge"><span class="bdot"></span>Enugu's Trusted Mouka Foam Distributor</div>
+        <div class="hbadge"><span class="bdot"></span>Enugu's #1 Mouka Foam Distributor</div>
         <h1>Sleep Better.<br/>Live <em>Right.</em><br/>Buy <em>Smart.</em></h1>
-        <p>IG NICE &amp; SONS delivers premium Mouka Foam mattresses, pillows &amp; accessories straight to your door across Obollo-Afor, Enugu &amp; nationwide.</p>
+        <p>IG NICE &amp; SONS delivers premium Mouka Foam mattresses, pillows &amp; accessories straight to your door — across Obollo-Afor, Enugu &amp; nationwide.</p>
         <div class="hcta">
-          <a class="btn-h" onclick="showPage('home');setTimeout(()=>scrollTo('#products'),100)">
-            <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>Buy Right — Shop Now
+          <a class="btn-hero" onclick="go('home');later('#products')">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
+            Buy Right — Shop Now
           </a>
-          <a class="btn-ho" onclick="showPage('about-page')">Learn About Us →</a>
+          <a class="btn-hout" onclick="go('about')">Learn About Us →</a>
         </div>
         <div class="htr">
           <div class="ti"><strong>10K+</strong><span>Happy Customers</span></div><div class="ts"></div>
@@ -522,7 +632,11 @@ a{text-decoration:none;color:inherit}
       </div>
       <div class="hv">
         <div class="him">
-          <div class="hbox"><img src="https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=700&q=85&auto=format&fit=crop" onerror="this.src='https://via.placeholder.com/700x525/006738/ffffff?text=Mouka+Foam'" alt="Premium Mouka Foam Mattress" loading="eager"/></div>
+          <div class="hbox">
+            <img src="https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=700&q=85&auto=format&fit=crop"
+                 onerror="this.src='https://via.placeholder.com/700x525/006738/ffffff?text=Mouka+Foam'"
+                 alt="Premium Mouka Foam Mattress" loading="eager"/>
+          </div>
           <div class="fc t"><div class="fi">✅</div><div class="ft"><strong>Certified Quality</strong><span>ISO-Approved Foams</span></div></div>
           <div class="fc b"><div class="fi">🚚</div><div class="ft"><strong>Fast Delivery</strong><span>Same-Day in Obollo-Afor</span></div></div>
         </div>
@@ -532,95 +646,88 @@ a{text-decoration:none;color:inherit}
 
   <!-- TICKER -->
   <div class="ticker"><div class="ttrack">
-    <span class="titem"><span class="tdot"></span>FREE DELIVERY ABOVE ₦50,000</span>
-    <span class="titem"><span class="tdot"></span>GENUINE MOUKA FOAM PRODUCTS</span>
-    <span class="titem"><span class="tdot"></span>WHOLESALE &amp; RETAIL AVAILABLE</span>
-    <span class="titem"><span class="tdot"></span>15+ YEARS IN BUSINESS</span>
-    <span class="titem"><span class="tdot"></span>OBOLLO-AFOR, ENUGU STATE</span>
-    <span class="titem"><span class="tdot"></span>CALL: +234 806 852 2444</span>
-    <span class="titem"><span class="tdot"></span>HOTELS · HOSPITALS · SCHOOLS</span>
-    <span class="titem"><span class="tdot"></span>FREE DELIVERY ABOVE ₦50,000</span>
-    <span class="titem"><span class="tdot"></span>GENUINE MOUKA FOAM PRODUCTS</span>
-    <span class="titem"><span class="tdot"></span>WHOLESALE &amp; RETAIL AVAILABLE</span>
-    <span class="titem"><span class="tdot"></span>15+ YEARS IN BUSINESS</span>
-    <span class="titem"><span class="tdot"></span>OBOLLO-AFOR, ENUGU STATE</span>
-    <span class="titem"><span class="tdot"></span>CALL: +234 806 852 2444</span>
-    <span class="titem"><span class="tdot"></span>HOTELS · HOSPITALS · SCHOOLS</span>
+    <span class="ti2"><span class="tdot"></span>FREE DELIVERY ABOVE ₦50,000</span>
+    <span class="ti2"><span class="tdot"></span>GENUINE MOUKA FOAM PRODUCTS</span>
+    <span class="ti2"><span class="tdot"></span>WHOLESALE &amp; RETAIL AVAILABLE</span>
+    <span class="ti2"><span class="tdot"></span>15+ YEARS IN BUSINESS</span>
+    <span class="ti2"><span class="tdot"></span>OBOLLO-AFOR, ENUGU STATE</span>
+    <span class="ti2"><span class="tdot"></span>CALL: +234 806 852 2444</span>
+    <span class="ti2"><span class="tdot"></span>HOTELS · HOSPITALS · SCHOOLS</span>
+    <span class="ti2"><span class="tdot"></span>FREE DELIVERY ABOVE ₦50,000</span>
+    <span class="ti2"><span class="tdot"></span>GENUINE MOUKA FOAM PRODUCTS</span>
+    <span class="ti2"><span class="tdot"></span>WHOLESALE &amp; RETAIL AVAILABLE</span>
+    <span class="ti2"><span class="tdot"></span>15+ YEARS IN BUSINESS</span>
+    <span class="ti2"><span class="tdot"></span>OBOLLO-AFOR, ENUGU STATE</span>
+    <span class="ti2"><span class="tdot"></span>CALL: +234 806 852 2444</span>
+    <span class="ti2"><span class="tdot"></span>HOTELS · HOSPITALS · SCHOOLS</span>
   </div></div>
 
   <!-- FEATURES -->
-  <section class="feats">
+  <section class="section-pad" style="background:var(--w)">
     <div class="sw">
       <p class="eye r">Why Choose Us</p>
       <h2 class="stit r d1">The IG NICE &amp; SONS Difference</h2>
       <p class="ssub r d2">We don't just sell mattresses — we deliver comfort, trust, and value with every single order.</p>
       <div class="fgrid">
-        <div class="fcard r d1"><div class="ficon">🛡️</div><h3>100% Authentic</h3><p>Every item sourced directly from Mouka's official distribution chain. Zero counterfeits, guaranteed.</p></div>
-        <div class="fcard r d2"><div class="ficon">💰</div><h3>Best Price Guarantee</h3><p>Factory-competitive prices with bulk discounts for businesses, hotels &amp; institutions.</p></div>
-        <div class="fcard r d3"><div class="ficon">🚚</div><h3>Fast Delivery</h3><p>Same-day delivery in Obollo-Afor. Enugu-wide &amp; nationwide logistics available.</p></div>
-        <div class="fcard r d4"><div class="ficon">🌟</div><h3>Expert Guidance</h3><p>Our trained team helps you select the right density, thickness &amp; size for your needs.</p></div>
-        <div class="fcard r d5"><div class="ficon">🔄</div><h3>Easy Returns</h3><p>30-day return policy on all products. We stand fully behind our quality promise.</p></div>
-        <div class="fcard r d6"><div class="ficon">📦</div><h3>Wholesale &amp; Retail</h3><p>Whether you need 1 piece or 1,000 — we have the inventory to serve you.</p></div>
+        <div class="fcard r d1"><div class="fic">🛡️</div><h3>100% Authentic</h3><p>Every item sourced directly from Mouka's official chain. Zero counterfeits, guaranteed.</p></div>
+        <div class="fcard r d2"><div class="fic">💰</div><h3>Best Price Guarantee</h3><p>Factory-competitive prices with bulk discounts for businesses, hotels &amp; institutions.</p></div>
+        <div class="fcard r d3"><div class="fic">🚚</div><h3>Fast Delivery</h3><p>Same-day delivery in Obollo-Afor. Enugu-wide &amp; nationwide logistics available.</p></div>
+        <div class="fcard r d4"><div class="fic">🌟</div><h3>Expert Guidance</h3><p>Our trained team helps you select the right density, thickness &amp; size for your needs.</p></div>
+        <div class="fcard r d5"><div class="fic">🔄</div><h3>Easy Returns</h3><p>30-day return policy. We stand fully behind every product we sell.</p></div>
+        <div class="fcard r d6"><div class="fic">📦</div><h3>Wholesale &amp; Retail</h3><p>1 piece or 1,000 — we have the inventory and pricing to serve any order size.</p></div>
       </div>
     </div>
   </section>
 
   <!-- PRODUCTS -->
-  <section class="prods" id="products">
+  <section class="section-pad" style="background:var(--ow)" id="products">
     <div class="sw">
       <p class="eye r">Our Catalogue</p>
       <h2 class="stit r d1">Premium Mouka Products</h2>
-      <p class="ssub r d2">Hover any product to reveal pricing. Click <strong>Order Now</strong> to chat instantly on WhatsApp.</p>
+      <p class="ssub r d2">Hover any product to reveal pricing. Click <strong>Order Now</strong> to chat on WhatsApp instantly.</p>
       <div class="ptabs r d3">
-        <button class="ptab on" onclick="filterP('all',this)">All</button>
-        <button class="ptab" onclick="filterP('mattress',this)">Mattresses</button>
-        <button class="ptab" onclick="filterP('pillow',this)">Pillows</button>
-        <button class="ptab" onclick="filterP('topper',this)">Toppers</button>
-        <button class="ptab" onclick="filterP('wholesale',this)">Wholesale</button>
+        <button class="ptab on" onclick="fp('all',this)">All Products</button>
+        <button class="ptab" onclick="fp('mattress',this)">Mattresses</button>
+        <button class="ptab" onclick="fp('pillow',this)">Pillows</button>
+        <button class="ptab" onclick="fp('topper',this)">Toppers</button>
+        <button class="ptab" onclick="fp('wholesale',this)">Wholesale</button>
       </div>
       <div class="pgrid">
-        <div class="pc r d1" data-cat="mattress">
-          <div class="pimg"><span class="pbadge">Best Seller</span>
-            <img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=480&q=80&auto=format&fit=crop" onerror="this.src='https://via.placeholder.com/480x360/006738/fff?text=Maxicool'" alt="Mouka Maxicool" loading="lazy"/>
-            <div class="pov"><div class="pr">From ₦85,000</div><small>Single/Double/Queen/King</small><button class="povbtn" onclick="orderNow('Mouka Maxicool Mattress','From ₦85,000')">🛒 Order Now</button></div></div>
-          <div class="pinfo"><h3>Mouka Maxicool Mattress</h3><p>Advanced cooling technology for hot tropical nights. High-density orthopedic support.</p><div class="pmeta"><span class="pst">★★★★★ (4.9)</span><span class="ppr">₦85,000+</span></div></div>
-        </div>
-        <div class="pc r d2" data-cat="mattress">
-          <div class="pimg"><span class="pbadge new">New Arrival</span>
-            <img src="https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=480&q=80&auto=format&fit=crop" onerror="this.src='https://via.placeholder.com/480x360/004d28/fff?text=Classique'" alt="Mouka Classique" loading="lazy"/>
-            <div class="pov"><div class="pr">From ₦120,000</div><small>Queen/King sizes</small><button class="povbtn" onclick="orderNow('Mouka Classique Mattress','From ₦120,000')">🛒 Order Now</button></div></div>
-          <div class="pinfo"><h3>Mouka Classique Mattress</h3><p>Luxury multi-layer foam with bonnel spring. Hotel-grade comfort at home.</p><div class="pmeta"><span class="pst">★★★★★ (5.0)</span><span class="ppr">₦120,000+</span></div></div>
-        </div>
-        <div class="pc r d3" data-cat="mattress">
-          <div class="pimg"><span class="pbadge hot">Hot Deal</span>
-            <img src="https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=480&q=80&auto=format&fit=crop" onerror="this.src='https://via.placeholder.com/480x360/00884a/fff?text=Restabeds'" alt="Mouka Restabeds" loading="lazy"/>
-            <div class="pov"><div class="pr">From ₦45,000</div><small>Single/Double</small><button class="povbtn" onclick="orderNow('Mouka Restabeds Mattress','From ₦45,000')">🛒 Order Now</button></div></div>
-          <div class="pinfo"><h3>Mouka Restabeds Mattress</h3><p>Budget-friendly without compromise. Great for kids' rooms &amp; guest beds.</p><div class="pmeta"><span class="pst">★★★★☆ (4.7)</span><span class="ppr">₦45,000+</span></div></div>
-        </div>
-        <div class="pc r d4" data-cat="pillow">
-          <div class="pimg">
-            <img src="https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?w=480&q=80&auto=format&fit=crop" onerror="this.src='https://via.placeholder.com/480x360/c9a84c/fff?text=Pillow'" alt="Mouka Pillow" loading="lazy"/>
-            <div class="pov"><div class="pr">₦8,500</div><small>Per piece · Pair ₦15,000</small><button class="povbtn" onclick="orderNow('Mouka Comfort Pillow','₦8,500 per piece')">🛒 Order Now</button></div></div>
-          <div class="pinfo"><h3>Mouka Comfort Pillow</h3><p>Hypoallergenic foam with washable cover. Engineered for neck &amp; spine alignment.</p><div class="pmeta"><span class="pst">★★★★★ (4.8)</span><span class="ppr">₦8,500</span></div></div>
-        </div>
-        <div class="pc r d5" data-cat="topper">
-          <div class="pimg">
-            <img src="https://images.unsplash.com/photo-1631049552057-403cdb8f0658?w=480&q=80&auto=format&fit=crop" onerror="this.src='https://via.placeholder.com/480x360/006738/fff?text=Topper'" alt="Foam Topper" loading="lazy"/>
-            <div class="pov"><div class="pr">From ₦35,000</div><small>All standard sizes</small><button class="povbtn" onclick="orderNow('Memory Foam Topper','From ₦35,000')">🛒 Order Now</button></div></div>
-          <div class="pinfo"><h3>Memory Foam Topper</h3><p>Revitalize any mattress instantly. Conforms perfectly to your body shape.</p><div class="pmeta"><span class="pst">★★★★★ (4.9)</span><span class="ppr">₦35,000+</span></div></div>
-        </div>
-        <div class="pc r d6" data-cat="wholesale">
-          <div class="pimg"><span class="pbadge">Wholesale</span>
-            <img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=480&q=80&auto=format&fit=crop" onerror="this.src='https://via.placeholder.com/480x360/004d28/fff?text=Wholesale'" alt="Wholesale" loading="lazy"/>
-            <div class="pov"><div class="pr">Custom Price</div><small>Min. 10 units · Call us</small><button class="povbtn" onclick="orderNow('Wholesale Bundle','Custom pricing for bulk orders')">📞 Get Quote</button></div></div>
-          <div class="pinfo"><h3>Wholesale Bundle Deals</h3><p>Hotels, schools, hospitals &amp; contractors get special pricing. Custom bulk fulfillment.</p><div class="pmeta"><span class="pst">★★★★★ (5.0)</span><span class="ppr">Call Us</span></div></div>
-        </div>
+        <div class="pc r d1" data-cat="mattress"><div class="pim"><span class="pbg bs">Best Seller</span>
+          <img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=480&q=80&auto=format&fit=crop" onerror="this.src='https://via.placeholder.com/480x360/006738/fff?text=Maxicool'" alt="Mouka Maxicool" loading="lazy"/>
+          <div class="pov"><div class="pprice">From ₦85,000</div><small>Single/Double/Queen/King</small><button class="pov-btn" onclick="oNow('Mouka Maxicool Mattress','From ₦85,000')">🛒 Order Now</button></div></div>
+          <div class="pin"><h3>Mouka Maxicool Mattress</h3><p>Advanced cooling tech for tropical nights. High-density orthopedic support.</p><div class="pmeta"><span class="pstar">★★★★★ (4.9)</span><span class="pprc">₦85,000+</span></div></div></div>
+
+        <div class="pc r d2" data-cat="mattress"><div class="pim"><span class="pbg nw">New Arrival</span>
+          <img src="https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=480&q=80&auto=format&fit=crop" onerror="this.src='https://via.placeholder.com/480x360/004d28/fff?text=Classique'" alt="Mouka Classique" loading="lazy"/>
+          <div class="pov"><div class="pprice">From ₦120,000</div><small>Queen/King sizes</small><button class="pov-btn" onclick="oNow('Mouka Classique Mattress','From ₦120,000')">🛒 Order Now</button></div></div>
+          <div class="pin"><h3>Mouka Classique Mattress</h3><p>Luxury multi-layer foam with bonnel spring. Hotel-grade comfort at home.</p><div class="pmeta"><span class="pstar">★★★★★ (5.0)</span><span class="pprc">₦120,000+</span></div></div></div>
+
+        <div class="pc r d3" data-cat="mattress"><div class="pim"><span class="pbg ht">Hot Deal</span>
+          <img src="https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=480&q=80&auto=format&fit=crop" onerror="this.src='https://via.placeholder.com/480x360/00884a/fff?text=Restabeds'" alt="Mouka Restabeds" loading="lazy"/>
+          <div class="pov"><div class="pprice">From ₦45,000</div><small>Single/Double</small><button class="pov-btn" onclick="oNow('Mouka Restabeds Mattress','From ₦45,000')">🛒 Order Now</button></div></div>
+          <div class="pin"><h3>Mouka Restabeds Mattress</h3><p>Budget-friendly without compromise. Great for kids &amp; guest rooms.</p><div class="pmeta"><span class="pstar">★★★★☆ (4.7)</span><span class="pprc">₦45,000+</span></div></div></div>
+
+        <div class="pc r d4" data-cat="pillow"><div class="pim">
+          <img src="https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?w=480&q=80&auto=format&fit=crop" onerror="this.src='https://via.placeholder.com/480x360/c9a84c/fff?text=Pillow'" alt="Mouka Pillow" loading="lazy"/>
+          <div class="pov"><div class="pprice">₦8,500</div><small>Per piece · Pair ₦15,000</small><button class="pov-btn" onclick="oNow('Mouka Comfort Pillow','₦8,500 per piece')">🛒 Order Now</button></div></div>
+          <div class="pin"><h3>Mouka Comfort Pillow</h3><p>Hypoallergenic foam with washable cover. Neck &amp; spine alignment engineered.</p><div class="pmeta"><span class="pstar">★★★★★ (4.8)</span><span class="pprc">₦8,500</span></div></div></div>
+
+        <div class="pc r d5" data-cat="topper"><div class="pim">
+          <img src="https://images.unsplash.com/photo-1631049552057-403cdb8f0658?w=480&q=80&auto=format&fit=crop" onerror="this.src='https://via.placeholder.com/480x360/006738/fff?text=Topper'" alt="Foam Topper" loading="lazy"/>
+          <div class="pov"><div class="pprice">From ₦35,000</div><small>All standard sizes</small><button class="pov-btn" onclick="oNow('Memory Foam Topper','From ₦35,000')">🛒 Order Now</button></div></div>
+          <div class="pin"><h3>Memory Foam Topper</h3><p>Revitalize any mattress instantly. Conforms perfectly to your body.</p><div class="pmeta"><span class="pstar">★★★★★ (4.9)</span><span class="pprc">₦35,000+</span></div></div></div>
+
+        <div class="pc r d6" data-cat="wholesale"><div class="pim"><span class="pbg bs">Wholesale</span>
+          <img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=480&q=80&auto=format&fit=crop" onerror="this.src='https://via.placeholder.com/480x360/004d28/fff?text=Wholesale'" alt="Wholesale" loading="lazy"/>
+          <div class="pov"><div class="pprice">Custom Price</div><small>Min. 10 units · Call us</small><button class="pov-btn" onclick="oNow('Wholesale Bundle','Custom pricing for bulk')">📞 Get Quote</button></div></div>
+          <div class="pin"><h3>Wholesale Bundle Deals</h3><p>Hotels, schools, hospitals &amp; contractors. Custom bulk fulfillment available.</p><div class="pmeta"><span class="pstar">★★★★★ (5.0)</span><span class="pprc">Call Us</span></div></div></div>
       </div>
     </div>
   </section>
 
   <!-- ABOUT STRIP -->
-  <section class="about-s">
+  <section class="about-strip">
     <div class="ain">
       <div class="ac">
         <p class="eye rl">Our Story</p>
@@ -628,11 +735,11 @@ a{text-decoration:none;color:inherit}
         <p class="rl d2">IG NICE &amp; SONS has been Enugu State's most trusted Mouka Foam distributor for over 15 years. Based in Obollo-Afor, we serve thousands of families, hotels, hospitals &amp; businesses across Enugu and the South-East.</p>
         <ul class="alist rl d3">
           <li><span class="chk">✓</span> Authorized Mouka Foam Distributor since 2009</li>
-          <li><span class="chk">✓</span> 10,000+ satisfied customers in Enugu &amp; beyond</li>
-          <li><span class="chk">✓</span> Wholesale, retail &amp; corporate supply</li>
+          <li><span class="chk">✓</span> 10,000+ satisfied customers across Nigeria</li>
+          <li><span class="chk">✓</span> Wholesale, retail &amp; corporate supply available</li>
           <li><span class="chk">✓</span> Same-day delivery within Obollo-Afor</li>
         </ul>
-        <a class="btn-ab rl d4" href="https://wa.me/2348118722788?text=Good%20day%2C%20I%20would%20like%20to%20talk%20to%20your%20team." target="_blank" rel="noopener">💬 Talk to Our Team →</a>
+        <a class="btn-team rl d4" href="https://wa.me/2348118722788?text=Good%20day%2C%20I%20would%20like%20to%20talk%20to%20your%20team." target="_blank" rel="noopener">💬 Talk to Our Team →</a>
       </div>
       <div class="astats rr">
         <div class="astat d1"><strong>15+</strong><span>Years of Excellence</span></div>
@@ -643,20 +750,19 @@ a{text-decoration:none;color:inherit}
     </div>
   </section>
 
-  <!-- REVIEWS PREVIEW (home) -->
-  <section class="reviews-s">
+  <!-- REVIEWS PREVIEW -->
+  <section class="section-pad" style="background:var(--ow)">
     <div class="sw">
       <p class="eye r">Customer Reviews</p>
       <h2 class="stit r d1">What Our Customers Say</h2>
       <p class="ssub r d2">Real reviews from real customers across Enugu &amp; Nigeria.</p>
-      <div class="rev-grid" id="homeReviewsGrid">
-        <!-- Loaded dynamically -->
-        <div class="rcard r d1"><div class="rstars">★★★★★</div><p>Best mattress purchase I've ever made. The Maxicool is worth every naira — my back pain is completely gone after 3 weeks!</p><div class="rauth"><div class="rav">AO</div><div><div class="ran">Amaka Okonkwo</div><div class="ral">Obollo-Afor, Enugu</div></div><div class="rdate">Jan 2025</div></div></div>
-        <div class="rcard r d2"><div class="rstars">★★★★★</div><p>Furnished all 40 rooms of our hotel with Mouka mattresses. Wholesale pricing and delivery speed was impeccable.</p><div class="rauth"><div class="rav">CT</div><div><div class="ran">Chukwudi Tochukwu</div><div class="ral">Hotel Manager, Enugu</div></div><div class="rdate">Feb 2025</div></div></div>
-        <div class="rcard r d3"><div class="rstars">★★★★★</div><p>Ordered and delivered same day! IG NICE &amp; SONS is my permanent go-to for all Mouka foam products.</p><div class="rauth"><div class="rav">FK</div><div><div class="ran">Fatima Kabiru</div><div class="ral">Nationwide Delivery</div></div><div class="rdate">Mar 2025</div></div></div>
+      <div class="rgrid" id="homeRevs">
+        <div class="rcard r d1"><div class="rsts">★★★★★</div><p>Best mattress purchase I've ever made. The Maxicool is worth every naira — my back pain is completely gone after 3 weeks!</p><div class="rath"><div class="rav">AO</div><div><div class="ran">Amaka Okonkwo</div><div class="ral">Obollo-Afor, Enugu</div></div><div class="rdt">Jan 2025</div></div></div>
+        <div class="rcard r d2"><div class="rsts">★★★★★</div><p>Furnished all 40 rooms of our hotel. Wholesale pricing and delivery speed was absolutely impeccable. Will order again!</p><div class="rath"><div class="rav">CT</div><div><div class="ran">Chukwudi Tochukwu</div><div class="ral">Hotel Manager, Enugu</div></div><div class="rdt">Feb 2025</div></div></div>
+        <div class="rcard r d3"><div class="rsts">★★★★★</div><p>Ordered and delivered same day! IG NICE &amp; SONS is my permanent go-to for all Mouka foam products from now on.</p><div class="rath"><div class="rav">FK</div><div><div class="ran">Fatima Kabiru</div><div class="ral">Nationwide Delivery</div></div><div class="rdt">Mar 2025</div></div></div>
       </div>
-      <div style="text-align:center;margin-top:8px">
-        <button class="btn-pr" onclick="showPage('reviews-page')" style="display:inline-flex;">Read All Reviews &amp; Write Yours →</button>
+      <div style="text-align:center">
+        <button class="btn-buy" onclick="go('reviews')" style="display:inline-flex;border-radius:100px">Read All Reviews &amp; Write Yours →</button>
       </div>
     </div>
   </section>
@@ -664,280 +770,296 @@ a{text-decoration:none;color:inherit}
   <!-- CTA -->
   <section class="cta-s">
     <h2 class="r">Ready to Sleep Better Tonight?</h2>
-    <p class="r d1">Join over 10,000 Nigerians who trust IG NICE &amp; SONS for premium Mouka Foam.</p>
-    <div class="ctabtns r d2">
-      <a class="btn-h" href="https://wa.me/2348068522444?text=Good%20day%2C%20I%20will%20be%20needing%20a%20Mouka%20Foam%20product.%20My%20name%20is%20" target="_blank" rel="noopener">🛒 Order Now — Buy Right</a>
-      <a class="btn-ho" href="tel:+2348068522444">📞 Call: +234 806 852 2444</a>
+    <p class="r d1">Join over 10,000 Nigerians who trust IG NICE &amp; SONS for premium Mouka Foam. Order today from Obollo-Afor, Enugu.</p>
+    <div class="cta-btns r d2">
+      <a class="btn-hero" href="https://wa.me/2348068522444?text=Good%20day%2C%20I%20will%20be%20needing%20a%20Mouka%20Foam%20product.%20My%20name%20is%20" target="_blank" rel="noopener">🛒 Order Now — Buy Right</a>
+      <a class="btn-hout" href="tel:+2348068522444">📞 Call: +234 806 852 2444</a>
     </div>
   </section>
 
-</div><!-- end home page -->
+</div><!-- /home -->
 
-<!-- ════════════════════════════════
+<!-- ══════════════════════════════════════
      PAGE: REVIEWS
-════════════════════════════════ -->
-<div id="page-reviews-page" class="page" style="padding:80px 28px;background:var(--ow)">
-  <div class="sw">
-    <p class="eye">Customer Reviews</p>
-    <h1 class="stit">All Reviews</h1>
-    <p class="ssub">Genuine reviews from our 10,000+ customers. Log in to share yours!</p>
-
-    <!-- WRITE A REVIEW -->
-    <div class="rev-write r" id="reviewWriteBox">
-      <div id="revLoginPrompt" class="rev-locked">
+══════════════════════════════════════ -->
+<div id="pg-reviews" class="pg">
+  <div style="background:linear-gradient(135deg,var(--gd),var(--g));padding:72px 32px;text-align:center">
+    <p class="eye" style="color:var(--gol)">Customer Reviews</p>
+    <h1 style="font-family:var(--fd);font-size:clamp(2rem,4vw,3rem);font-weight:900;color:#fff;letter-spacing:-.03em">All Reviews</h1>
+    <p style="color:rgba(255,255,255,.68);max-width:440px;margin:12px auto 0">Genuine reviews from our 10,000+ customers. Log in to share yours!</p>
+  </div>
+  <div class="section-pad sw">
+    <!-- Write Review -->
+    <div class="rev-box r">
+      <div id="revLocked" class="rev-locked">
         <p>🔒 Please <strong>log in</strong> to write a review</p>
-        <button class="btn-pr" onclick="openLogin()" style="display:inline-flex;">Login / Register</button>
+        <button class="btn-buy" onclick="openLogin()" style="display:inline-flex;border-radius:100px">Login / Register</button>
       </div>
-      <div id="revForm" style="display:none;">
+      <div id="revForm" style="display:none">
         <h3>✍️ Write a Review</h3>
-        <p>Share your experience with IG NICE &amp; SONS</p>
-        <div class="star-pick" id="starPick">
-          <span data-v="1" onclick="setStars(1)">☆</span>
-          <span data-v="2" onclick="setStars(2)">☆</span>
-          <span data-v="3" onclick="setStars(3)">☆</span>
-          <span data-v="4" onclick="setStars(4)">☆</span>
-          <span data-v="5" onclick="setStars(5)">☆</span>
+        <p>Share your experience with IG NICE &amp; SONS — it helps others!</p>
+        <div class="star-row" id="starRow">
+          <span data-v="1" onclick="setStar(1)">★</span>
+          <span data-v="2" onclick="setStar(2)">★</span>
+          <span data-v="3" onclick="setStar(3)">★</span>
+          <span data-v="4" onclick="setStar(4)">★</span>
+          <span data-v="5" onclick="setStar(5)">★</span>
         </div>
-        <div class="fg" style="margin-bottom:12px"><label>Your Review *</label><textarea id="revText" rows="4" placeholder="Tell others about your experience with our products and service..." style="width:100%;padding:12px;border:1.5px solid var(--g300);border-radius:var(--rs);font-family:var(--fb);font-size:.92rem;resize:vertical"></textarea></div>
-        <div id="revStatus" style="display:none;padding:10px;border-radius:var(--rs);font-size:.85rem;font-weight:600;margin-bottom:10px"></div>
-        <button class="btn-sub" onclick="submitReview()" style="max-width:200px">Post Review</button>
+        <div class="fg" style="margin-bottom:14px">
+          <label>Your Review *</label>
+          <textarea id="revTxt" rows="4" placeholder="Tell others about your experience with our products and service..."></textarea>
+        </div>
+        <div id="revStat" style="display:none;padding:10px 14px;border-radius:var(--rs);font-size:.84rem;font-weight:600;margin-bottom:10px"></div>
+        <button class="btn-sub" onclick="postReview()" style="max-width:180px">Post Review →</button>
       </div>
     </div>
-
-    <div style="margin-top:40px">
-      <div class="rev-grid" id="allReviewsGrid"><p style="text-align:center;color:var(--g500);padding:40px">Loading reviews...</p></div>
-    </div>
+    <div id="allRevs"><p style="text-align:center;color:var(--g500);padding:50px 0">Loading reviews...</p></div>
   </div>
 </div>
 
-<!-- ════════════════════════════════
+<!-- ══════════════════════════════════════
      PAGE: ABOUT
-════════════════════════════════ -->
-<div id="page-about-page" class="page">
-  <div style="background:var(--g);padding:80px 28px;text-align:center;position:relative;overflow:hidden">
-    <div style="position:absolute;inset:0;opacity:.06;background-image:linear-gradient(rgba(255,255,255,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.5) 1px,transparent 1px);background-size:40px 40px"></div>
-    <p class="eye" style="color:var(--gol);position:relative">Our Story</p>
-    <h1 style="font-family:var(--fd);font-size:clamp(2rem,5vw,3.5rem);font-weight:900;color:#fff;letter-spacing:-.03em;position:relative">About IG NICE &amp; SONS</h1>
-    <p style="color:rgba(255,255,255,.75);max-width:500px;margin:12px auto 0;position:relative">Enugu's most trusted authorized Mouka Foam distributor since 2009</p>
+══════════════════════════════════════ -->
+<div id="pg-about" class="pg">
+  <div class="about-hero">
+    <p class="eye" style="color:var(--gol);position:relative;z-index:1">Our Story</p>
+    <h1 style="font-family:var(--fd);font-size:clamp(2rem,5vw,3.5rem);font-weight:900;color:#fff;letter-spacing:-.03em;position:relative;z-index:1">About IG NICE &amp; SONS</h1>
+    <p style="color:rgba(255,255,255,.72);max-width:480px;margin:12px auto 0;position:relative;z-index:1">Enugu's most trusted authorized Mouka Foam distributor since 2009</p>
   </div>
-  <div class="about-page">
-    <div class="about-body">
-      <div>
-        <div class="about-img-b"><img src="https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=600&q=80&auto=format&fit=crop" alt="Our Store" loading="lazy"/></div>
-        <div class="about-vals" style="margin-top:20px">
-          <div class="aval"><h4>🛡️ Our Mission</h4><p>To be Enugu's most reliable source of genuine, affordable Mouka Foam products.</p></div>
-          <div class="aval"><h4>👁️ Our Vision</h4><p>A Nigeria where every family sleeps on quality, affordable foam — delivered with care.</p></div>
-          <div class="aval"><h4>💎 Our Values</h4><p>Integrity, quality, customer-first service and community impact in everything we do.</p></div>
-          <div class="aval"><h4>🤝 Our Promise</h4><p>100% authentic Mouka products, fair prices, and a smile with every delivery.</p></div>
-        </div>
+  <div class="about-body">
+    <div>
+      <div class="about-img"><img src="https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=600&q=80&auto=format&fit=crop" alt="IG NICE & SONS Store" loading="lazy"/></div>
+      <div class="about-vals" style="margin-top:20px">
+        <div class="aval"><h4>🛡️ Our Mission</h4><p>To be Enugu's most reliable source of genuine, affordable Mouka Foam products.</p></div>
+        <div class="aval"><h4>👁️ Our Vision</h4><p>A Nigeria where every family sleeps on quality foam — delivered with care.</p></div>
+        <div class="aval"><h4>💎 Our Values</h4><p>Integrity, quality, and customer-first service in everything we do.</p></div>
+        <div class="aval"><h4>🤝 Our Promise</h4><p>100% authentic Mouka products, fair prices, and a smile with every delivery.</p></div>
       </div>
-      <div class="about-text">
-        <h2>From Obollo-Afor to All of Nigeria</h2>
-        <p>IG NICE &amp; SONS was founded over 15 years ago in the heart of Obollo-Afor, Enugu State, with one simple goal: to give every Nigerian access to the comfort they deserve at a price they can afford.</p>
-        <p>Starting from a single shop on Old Oturukpo Road, we have grown into one of the most recognized Mouka Foam distributors in Enugu State — serving individual families, hotels, hospitals, schools, dormitories, and corporate institutions.</p>
-        <p>As a fully authorized Mouka distributor, every product we carry comes direct from the manufacturer with a genuine warranty. We never stock counterfeit products — our reputation is built on trust.</p>
-        <p>Over 10,000 customers have trusted us with their comfort. We deliver same-day within Obollo-Afor and ship nationally. Our team is always available to guide you to the right product for your budget and sleep style.</p>
-        <div style="margin-top:28px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
-          <div style="background:var(--gl);border-radius:var(--r);padding:20px;text-align:center"><strong style="font-family:var(--fd);font-size:2rem;color:var(--g);display:block">2009</strong><span style="font-size:.8rem;color:var(--g500);text-transform:uppercase;letter-spacing:.05em">Year Founded</span></div>
-          <div style="background:var(--gl);border-radius:var(--r);padding:20px;text-align:center"><strong style="font-family:var(--fd);font-size:2rem;color:var(--g);display:block">10K+</strong><span style="font-size:.8rem;color:var(--g500);text-transform:uppercase;letter-spacing:.05em">Customers Served</span></div>
-          <div style="background:var(--gl);border-radius:var(--r);padding:20px;text-align:center"><strong style="font-family:var(--fd);font-size:2rem;color:var(--g);display:block">15+</strong><span style="font-size:.8rem;color:var(--g500);text-transform:uppercase;letter-spacing:.05em">Years Experience</span></div>
-          <div style="background:var(--gl);border-radius:var(--r);padding:20px;text-align:center"><strong style="font-family:var(--fd);font-size:2rem;color:var(--g);display:block">100%</strong><span style="font-size:.8rem;color:var(--g500);text-transform:uppercase;letter-spacing:.05em">Authentic Products</span></div>
-        </div>
-        <div style="margin-top:28px;display:flex;gap:12px;flex-wrap:wrap">
-          <a class="btn-pr" href="https://wa.me/2348068522444?text=Good%20day%2C%20I%20will%20be%20needing%20a%20Mouka%20Foam%20product.%20My%20name%20is%20" target="_blank" rel="noopener">🛒 Shop Now</a>
-          <a class="btn-gh" onclick="showPage('contact-page')">📞 Contact Us</a>
-        </div>
+    </div>
+    <div class="about-txt">
+      <h2>From Obollo-Afor to All of Nigeria</h2>
+      <p>IG NICE &amp; SONS was founded over 15 years ago at No. 4 Old Oturukpo Road, Obollo-Afor, Enugu State, with one simple goal: to give every Nigerian access to the comfort they deserve at a price they can afford.</p>
+      <p>From a single shop, we've grown into one of the most recognized Mouka Foam distributors in Enugu State — serving individual families, hotels, hospitals, schools, dormitories, and corporate institutions.</p>
+      <p>As a fully authorized Mouka distributor, every product we carry comes direct from the manufacturer with a genuine warranty. We never stock counterfeits — our reputation is built entirely on trust.</p>
+      <div class="num-grid">
+        <div class="num-card"><strong>2009</strong><span>Year Founded</span></div>
+        <div class="num-card"><strong>10K+</strong><span>Customers Served</span></div>
+        <div class="num-card"><strong>15+</strong><span>Years Experience</span></div>
+        <div class="num-card"><strong>100%</strong><span>Authentic Products</span></div>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <a class="btn-buy" href="https://wa.me/2348068522444?text=Good%20day%2C%20I%20will%20be%20needing%20a%20Mouka%20Foam%20product.%20My%20name%20is%20" target="_blank" rel="noopener" style="border-radius:100px">🛒 Shop Now</a>
+        <button class="btn-login" onclick="go('contact')">📞 Contact Us</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ════════════════════════════════
+<!-- ══════════════════════════════════════
      PAGE: CONTACT
-════════════════════════════════ -->
-<div id="page-contact-page" class="page">
-  <div style="background:var(--gd);padding:70px 28px;text-align:center">
+══════════════════════════════════════ -->
+<div id="pg-contact" class="pg">
+  <div style="background:linear-gradient(135deg,var(--gd),var(--g));padding:72px 32px;text-align:center">
     <p class="eye" style="color:var(--gol)">Get In Touch</p>
     <h1 style="font-family:var(--fd);font-size:clamp(2rem,4vw,3rem);font-weight:900;color:#fff;letter-spacing:-.03em">Contact Us</h1>
-    <p style="color:rgba(255,255,255,.7);max-width:480px;margin:10px auto 0">Place an order, ask a question, or visit our showroom in Obollo-Afor.</p>
+    <p style="color:rgba(255,255,255,.68);max-width:440px;margin:12px auto 0">Place an order, ask a question, or visit our showroom.</p>
   </div>
-  <section class="contact-s">
-    <div class="sw">
-      <div class="cgrid">
-        <div class="cinfo">
-          <h3>Visit Our Showroom or Call Us</h3>
-          <p>We respond within the hour. Walk in any day or reach us via WhatsApp.</p>
-          <div class="ci"><div class="cion">📍</div><div><strong>Showroom Address</strong><span>No. 4 Old Oturukpo Road, Obollo-Afor, Enugu State, Nigeria</span></div></div>
-          <div class="ci"><div class="cion">📞</div><div><strong>Orders (WhatsApp)</strong><span>+234 806 852 2444</span></div></div>
-          <div class="ci"><div class="cion">📞</div><div><strong>Support Line</strong><span>+234 803 620 6500</span></div></div>
-          <div class="ci"><div class="cion">💬</div><div><strong>Team / Wholesale</strong><span>+234 811 872 2788</span></div></div>
-          <div class="ci"><div class="cion">🕐</div><div><strong>Working Hours</strong><span>Mon–Sat: 8AM–7PM · Sun: 10AM–4PM</span></div></div>
-          <div style="margin-top:24px;padding:20px;background:var(--gl);border-radius:var(--r);border-left:4px solid var(--g)">
-            <strong style="font-size:.88rem;color:var(--g)">📍 Find Us on Maps</strong>
-            <p style="font-size:.82rem;color:var(--g700);margin-top:6px">No. 4 Old Oturukpo Road, Obollo-Afor, Enugu State — near the main market junction.</p>
-            <a href="https://maps.google.com?q=Obollo-Afor,+Enugu+State,+Nigeria" target="_blank" class="btn-pr" style="margin-top:12px;display:inline-flex;font-size:.82rem;padding:8px 16px">Open in Google Maps</a>
+  <section class="section-pad sw">
+    <div class="cgrid">
+      <div class="cinfo">
+        <h3>Visit or Call Us</h3>
+        <p>We respond within the hour. Walk in any day or reach us via WhatsApp.</p>
+        <div class="ci"><div class="cion">📍</div><div><strong>Showroom</strong><span>No. 4 Old Oturukpo Road, Obollo-Afor, Enugu State</span></div></div>
+        <div class="ci"><div class="cion">📞</div><div><strong>Orders (WhatsApp)</strong><span>+234 806 852 2444</span></div></div>
+        <div class="ci"><div class="cion">📞</div><div><strong>Support Line</strong><span>+234 803 620 6500</span></div></div>
+        <div class="ci"><div class="cion">💬</div><div><strong>Team / Wholesale</strong><span>+234 811 872 2788</span></div></div>
+        <div class="ci"><div class="cion">🕐</div><div><strong>Working Hours</strong><span>Mon–Sat: 8AM–7PM · Sun: 10AM–4PM</span></div></div>
+        <div style="margin-top:24px;padding:20px;background:var(--gl);border-radius:var(--r);border-left:4px solid var(--g)">
+          <strong style="font-size:.88rem;color:var(--g)">📍 Find Us on Google Maps</strong>
+          <p style="font-size:.82rem;color:var(--g700);margin-top:6px;line-height:1.55">No. 4 Old Oturukpo Road, Obollo-Afor, Enugu State — near the main market junction.</p>
+          <a href="https://maps.google.com?q=Obollo-Afor,+Enugu+State,+Nigeria" target="_blank" class="btn-buy" style="margin-top:12px;display:inline-flex;font-size:.82rem;padding:8px 18px;border-radius:100px">Open in Google Maps</a>
+        </div>
+      </div>
+      <div>
+        <form class="cform" onsubmit="sendOrder(event)">
+          <div class="frow"><div class="fg"><label>Full Name *</label><input type="text" id="cn" placeholder="Your full name" required/></div><div class="fg"><label>Phone *</label><input type="tel" id="cp" placeholder="+234 xxx xxx xxxx" required/></div></div>
+          <div class="fg"><label>Delivery Address *</label><input type="text" id="ca" placeholder="e.g. No. 5 Market Road, Obollo-Afor" required/></div>
+          <div class="fg"><label>Product *</label>
+            <select id="cprod" required>
+              <option value="">— Select Product —</option>
+              <option>Mouka Maxicool Mattress</option><option>Mouka Classique Mattress</option>
+              <option>Mouka Restabeds Mattress</option><option>Mouka Comfort Pillow</option>
+              <option>Memory Foam Topper</option><option>Wholesale Bundle</option><option>Other / Custom</option>
+            </select></div>
+          <div class="frow">
+            <div class="fg"><label>Size</label><select id="csz"><option>Single (3×6)</option><option>Double (4×6)</option><option>Queen (4.5×6)</option><option>King (5×6)</option><option>Custom</option></select></div>
+            <div class="fg"><label>Quantity</label><input type="number" id="cq" min="1" value="1"/></div>
           </div>
-        </div>
-        <div>
-          <form class="cf" onsubmit="submitContactForm(event)">
-            <div class="frow"><div class="fg"><label>Full Name *</label><input type="text" id="cn" placeholder="Your full name" required/></div><div class="fg"><label>Phone *</label><input type="tel" id="cp" placeholder="+234 xxx xxx xxxx" required/></div></div>
-            <div class="fg"><label>Delivery Address *</label><input type="text" id="ca" placeholder="e.g. No. 5 Market Road, Obollo-Afor" required/></div>
-            <div class="fg"><label>Product of Interest *</label>
-              <select id="cprod" required>
-                <option value="">— Select Product —</option>
-                <option>Mouka Maxicool Mattress</option><option>Mouka Classique Mattress</option>
-                <option>Mouka Restabeds Mattress</option><option>Mouka Comfort Pillow</option>
-                <option>Memory Foam Topper</option><option>Wholesale Bundle</option><option>Other / Custom</option>
-              </select></div>
-            <div class="frow">
-              <div class="fg"><label>Size</label><select id="csz"><option>Single (3×6)</option><option>Double (4×6)</option><option>Queen (4.5×6)</option><option>King (5×6)</option><option>Custom</option></select></div>
-              <div class="fg"><label>Quantity</label><input type="number" id="cq" min="1" value="1"/></div>
-            </div>
-            <div class="fg"><label>Additional Message</label><textarea id="cm" placeholder="Special requests, budget, or questions..."></textarea></div>
-            <button class="btn-sub" type="submit" id="cfBtn">🛒 Submit Order via WhatsApp</button>
-            <p style="font-size:.76rem;color:var(--g500);text-align:center;margin-top:6px">Details sent to both sales numbers via WhatsApp.</p>
-          </form>
-        </div>
+          <div class="fg"><label>Additional Message</label><textarea id="cm" placeholder="Special requests, budget, or questions..."></textarea></div>
+          <button class="btn-sub" type="submit" id="cBtn">🛒 Submit Order via WhatsApp</button>
+          <p style="font-size:.75rem;color:var(--g500);text-align:center;margin-top:6px">Details sent to both sales numbers via WhatsApp simultaneously.</p>
+        </form>
       </div>
     </div>
   </section>
 </div>
 
-<!-- ════════════════════════════════
+<!-- ══════════════════════════════════════
      PAGE: FAQ
-════════════════════════════════ -->
-<div id="page-faq-page" class="page" style="background:var(--ow)">
-  <div style="background:var(--g);padding:70px 28px;text-align:center">
+══════════════════════════════════════ -->
+<div id="pg-faq" class="pg" style="background:var(--ow)">
+  <div style="background:linear-gradient(135deg,var(--gd),var(--g));padding:72px 32px;text-align:center">
     <p class="eye" style="color:var(--gol)">Help Center</p>
     <h1 style="font-family:var(--fd);font-size:clamp(2rem,4vw,3rem);font-weight:900;color:#fff;letter-spacing:-.03em">Frequently Asked Questions</h1>
-    <p style="color:rgba(255,255,255,.7);max-width:480px;margin:10px auto 0">Find answers to the most common questions about our products and services.</p>
+    <p style="color:rgba(255,255,255,.68);max-width:440px;margin:12px auto 0">Everything you need to know about our products and services.</p>
   </div>
-  <div class="faq-page">
-    <div id="faqList"></div>
-    <div style="margin-top:40px;text-align:center;padding:32px;background:var(--gl);border-radius:var(--r)">
+  <div style="padding:72px 32px;max-width:820px;margin:0 auto" id="faqContainer"></div>
+  <div style="text-align:center;padding:0 32px 72px">
+    <div style="background:var(--gl);border-radius:var(--r);padding:36px;max-width:500px;margin:0 auto">
       <h3 style="font-family:var(--fd);font-size:1.3rem;color:var(--bk);margin-bottom:8px">Still have questions?</h3>
-      <p style="color:var(--g500);font-size:.9rem;margin-bottom:16px">Our team is available every day from 8AM–7PM</p>
+      <p style="color:var(--g500);font-size:.9rem;margin-bottom:18px">Our team is available every day from 8AM–7PM</p>
       <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-        <a class="btn-pr" href="https://wa.me/2348068522444" target="_blank" rel="noopener">💬 WhatsApp Us</a>
-        <a class="btn-gh" href="tel:+2348068522444">📞 Call Us</a>
+        <a class="btn-buy" href="https://wa.me/2348068522444" target="_blank" style="border-radius:100px">💬 WhatsApp Us</a>
+        <a class="btn-login" href="tel:+2348068522444">📞 Call Us</a>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ════════════════════════════════
+<!-- ══════════════════════════════════════
      PAGE: PROFILE
-════════════════════════════════ -->
-<div id="page-profile-page" class="page" style="background:var(--ow)">
-  <div class="profile-page">
-    <div class="prof-header" id="profHeader">
-      <div class="prof-av" id="profAv">?</div>
-      <div class="prof-info">
-        <h2 id="profName">Loading...</h2>
-        <p id="profEmail"></p>
-        <span class="prof-badge">Verified Customer</span>
+══════════════════════════════════════ -->
+<div id="pg-profile" class="pg prof-pg">
+  <!-- Banner -->
+  <div class="prof-banner">
+    <div class="prof-banner-in">
+      <div class="prof-av-lg" id="pAvLg">?</div>
+      <div class="prof-name-area">
+        <h2 id="pName">Welcome!</h2>
+        <p id="pEmail"></p>
+        <div class="prof-badge" id="provBadge">✅ Verified Customer</div>
       </div>
     </div>
-    <div class="prof-grid">
-      <!-- Edit Info -->
-      <div class="prof-card">
-        <h3><span>✏️</span> Edit My Info</h3>
-        <div class="pfield"><label>Display Name</label><input type="text" id="peName" placeholder="Your full name"/></div>
-        <div class="pfield"><label>Phone Number</label><input type="text" id="pePhone" placeholder="+234 xxx xxx xxxx"/></div>
-        <div class="pfield"><label>Email</label><input type="text" id="peEmail" disabled/></div>
-        <div class="pfield"><label>Delivery Address</label><input type="text" id="peAddr" placeholder="Your usual delivery address"/></div>
-        <div id="peStatus" style="font-size:.82rem;font-weight:600;margin-bottom:8px;display:none"></div>
-        <button class="btn-save" onclick="saveProfile()">Save Changes</button>
+  </div>
+  <!-- Content -->
+  <div class="prof-content">
+    <!-- Tabs -->
+    <div class="prof-tabs">
+      <button class="ptab2 on" onclick="showPTab('edit',this)">✏️ Edit Profile</button>
+      <button class="ptab2" onclick="showPTab('account',this)">⚙️ Account</button>
+      <button class="ptab2" onclick="showPTab('socials',this)">📲 Community</button>
+      <button class="ptab2" onclick="showPTab('activity',this)">📊 Activity</button>
+    </div>
+    <!-- Edit Panel -->
+    <div class="prof-panel on" id="pp-edit">
+      <div class="pcards">
+        <div class="pcard">
+          <h3>✏️ Edit My Info</h3>
+          <div class="pfield"><label>Display Name</label><input type="text" id="peName" placeholder="Your full name"/></div>
+          <div class="pfield"><label>Phone Number</label><input type="text" id="pePhone" placeholder="+234 xxx xxx xxxx"/></div>
+          <div class="pfield"><label>Email (cannot change)</label><input type="text" id="peEmail" disabled/></div>
+          <div class="pfield"><label>Delivery Address</label><input type="text" id="peAddr" placeholder="Your usual delivery address"/></div>
+          <div class="ps-msg" id="peMsg"></div>
+          <button class="btn-save" onclick="saveProf()">Save Changes</button>
+        </div>
+        <div class="pcard" style="background:var(--g50)">
+          <h3>💡 Account Tips</h3>
+          <p style="font-size:.85rem;color:var(--g500);line-height:1.7;margin-bottom:16px">Keep your profile updated so we can serve you faster on every order!</p>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="background:#fff;border-radius:var(--rs);padding:14px;border-left:4px solid var(--g)"><strong style="font-size:.85rem;color:var(--bk)">📦 Faster Ordering</strong><p style="font-size:.8rem;color:var(--g500);margin-top:3px">Add your delivery address so we can quote you delivery cost instantly.</p></div>
+            <div style="background:#fff;border-radius:var(--rs);padding:14px;border-left:4px solid var(--gold)"><strong style="font-size:.85rem;color:var(--bk)">⭐ Write Reviews</strong><p style="font-size:.8rem;color:var(--g500);margin-top:3px">Share your experience to help other customers make the right choice.</p></div>
+            <div style="background:#fff;border-radius:var(--rs);padding:14px;border-left:4px solid var(--gm)"><strong style="font-size:.85rem;color:var(--bk)">🎁 Returning Customer Perks</strong><p style="font-size:.8rem;color:var(--g500);margin-top:3px">Mention your account when ordering for exclusive repeat-customer pricing!</p></div>
+          </div>
+        </div>
       </div>
-      <!-- Account Actions -->
-      <div class="prof-card">
-        <h3><span>⚙️</span> Account</h3>
-        <ul class="prof-menu-list">
-          <li class="pml-item" onclick="showPage('reviews-page')"><div class="pml-icon">⭐</div><div><strong>My Reviews</strong><br/><small style="color:var(--g500)">See reviews you've written</small></div></li>
-          <li class="pml-item" onclick="showPage('home');setTimeout(()=>scrollTo('#products'),100)"><div class="pml-icon">🛏️</div><div><strong>Browse Products</strong><br/><small style="color:var(--g500)">Shop our Mouka Foam catalogue</small></div></li>
-          <li class="pml-item" onclick="showPage('contact-page')"><div class="pml-icon">🛒</div><div><strong>Place an Order</strong><br/><small style="color:var(--g500)">Order via our contact form</small></div></li>
-          <li class="pml-item" onclick="openSupport()"><div class="pml-icon">🎧</div><div><strong>Customer Support</strong><br/><small style="color:var(--g500)">Chat with our team on WhatsApp</small></div></li>
-          <li class="pml-item danger" onclick="doLogout()"><div class="pml-icon" style="background:#ffeaea">🚪</div><div><strong>Log Out</strong><br/><small style="color:var(--g500)">Sign out of your account</small></div></li>
+    </div>
+    <!-- Account Panel -->
+    <div class="prof-panel" id="pp-account">
+      <div class="pcard" style="max-width:560px">
+        <h3>⚙️ Account Actions</h3>
+        <ul class="pmenu">
+          <li class="pmi" onclick="go('reviews')"><div class="pmi-ic">⭐</div><div class="pmi-tx"><strong>My Reviews</strong><small>View reviews you've written</small></div></li>
+          <li class="pmi" onclick="go('home');later('#products')"><div class="pmi-ic">🛏️</div><div class="pmi-tx"><strong>Browse Products</strong><small>Shop our Mouka Foam catalogue</small></div></li>
+          <li class="pmi" onclick="go('contact')"><div class="pmi-ic">🛒</div><div class="pmi-tx"><strong>Place an Order</strong><small>Order via our contact form</small></div></li>
+          <li class="pmi" onclick="callSupport()"><div class="pmi-ic">🎧</div><div class="pmi-tx"><strong>Customer Support</strong><small>Chat with our team on WhatsApp</small></div></li>
+          <li class="pmi danger" onclick="doLogout()"><div class="pmi-ic">🚪</div><div class="pmi-tx"><strong>Log Out</strong><small>Sign out of your account</small></div></li>
         </ul>
       </div>
-      <!-- Join Socials -->
-      <div class="prof-card">
-        <h3><span>📲</span> Join Our Community</h3>
-        <p style="font-size:.84rem;color:var(--g500);margin-bottom:16px">Follow us for deals, tips &amp; product updates!</p>
-        <div class="social-links-grid" id="socialLinksGrid">
-          <a class="slink" href="https://facebook.com" target="_blank" rel="noopener"><span class="si">📘</span> Facebook</a>
-          <a class="slink" href="https://instagram.com" target="_blank" rel="noopener"><span class="si">📸</span> Instagram</a>
-          <a class="slink" href="https://wa.me/2348068522444" target="_blank" rel="noopener"><span class="si">💬</span> WhatsApp</a>
-          <a class="slink" href="https://twitter.com" target="_blank" rel="noopener"><span class="si">𝕏</span> Twitter/X</a>
+    </div>
+    <!-- Socials Panel -->
+    <div class="prof-panel" id="pp-socials">
+      <div class="pcard" style="max-width:560px">
+        <h3>📲 Join Our Community</h3>
+        <p style="font-size:.85rem;color:var(--g500);margin-bottom:20px">Follow us for deals, new arrivals, sleep tips &amp; updates!</p>
+        <div class="soc-grid">
+          <a class="sl" href="https://facebook.com" target="_blank" rel="noopener"><span class="si">📘</span> Facebook</a>
+          <a class="sl" href="https://instagram.com" target="_blank" rel="noopener"><span class="si">📸</span> Instagram</a>
+          <a class="sl" href="https://wa.me/2348068522444" target="_blank" rel="noopener"><span class="si">💬</span> WhatsApp</a>
+          <a class="sl" href="https://twitter.com" target="_blank" rel="noopener"><span class="si">𝕏</span> Twitter / X</a>
         </div>
-        <div style="margin-top:20px;padding:14px;background:var(--gl);border-radius:var(--rs)">
-          <p style="font-size:.82rem;color:var(--g);font-weight:600">📦 Order Status</p>
-          <p style="font-size:.8rem;color:var(--g700);margin-top:4px">For order updates, call <a href="tel:+2348068522444" style="color:var(--g);font-weight:700">0806 852 2444</a> or message us on WhatsApp.</p>
+        <div style="margin-top:22px;padding:16px;background:var(--gl);border-radius:var(--rs)">
+          <p style="font-size:.84rem;color:var(--g);font-weight:700">📦 Order Status</p>
+          <p style="font-size:.8rem;color:var(--g700);margin-top:4px;line-height:1.55">For updates on your order, call or WhatsApp <a href="tel:+2348068522444" style="color:var(--g);font-weight:700">0806 852 2444</a></p>
         </div>
       </div>
-      <!-- Quick Stats -->
-      <div class="prof-card">
-        <h3><span>📊</span> Your Activity</h3>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-          <div style="background:var(--gl);border-radius:var(--rs);padding:16px;text-align:center"><strong style="font-family:var(--fd);font-size:1.6rem;color:var(--g);display:block" id="myRevCount">0</strong><span style="font-size:.74rem;color:var(--g500)">Reviews Written</span></div>
-          <div style="background:var(--gl);border-radius:var(--rs);padding:16px;text-align:center"><strong style="font-family:var(--fd);font-size:1.6rem;color:var(--g);display:block">⭐</strong><span style="font-size:.74rem;color:var(--g500)">Verified Customer</span></div>
+    </div>
+    <!-- Activity Panel -->
+    <div class="prof-panel" id="pp-activity">
+      <div class="pcard" style="max-width:560px">
+        <h3>📊 Your Activity</h3>
+        <div class="stat-mini">
+          <div class="sm"><strong id="myRevCnt">0</strong><span>Reviews Written</span></div>
+          <div class="sm"><strong>⭐</strong><span>Verified Customer</span></div>
         </div>
-        <div style="padding:16px;background:#fff7e6;border-radius:var(--rs);border-left:4px solid var(--gold)">
-          <p style="font-size:.84rem;font-weight:700;color:var(--gd)">🎁 Loyalty Perks</p>
-          <p style="font-size:.8rem;color:var(--g700);margin-top:4px">As a returning customer, mention your account when ordering for exclusive pricing!</p>
+        <div class="loyalty-box">
+          <strong>🎁 Loyalty Perks Active</strong>
+          <p>As a returning customer, mention your account when ordering for exclusive pricing! Call us on <a href="tel:+2348068522444" style="color:var(--gd);font-weight:700">0806 852 2444</a>.</p>
+        </div>
+        <div style="margin-top:16px;padding:16px;background:var(--g50);border-radius:var(--rs)">
+          <p style="font-size:.84rem;font-weight:700;color:var(--bk);margin-bottom:10px">Recent Activity</p>
+          <div id="actFeed" style="font-size:.83rem;color:var(--g500)">No recent activity yet.</div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ════════════════════════════════
-     FOOTER
-════════════════════════════════ -->
-<footer class="footer" id="mainFooter">
+<!-- FOOTER -->
+<footer class="footer" id="footer">
   <div class="fin">
-    <div class="fb">
-      <div class="logo"><div class="logo-i">IG</div><div class="logo-t"><span style="color:#fff">IG NICE &amp; SONS</span><span style="color:rgba(255,255,255,.4)">Mouka Foam Distributor</span></div></div>
+    <div class="fb-brand">
+      <div class="logo"><div class="logo-ic">IG</div><div class="logo-tx"><span style="color:#fff">IG NICE &amp; SONS</span><span style="color:rgba(255,255,255,.38)">Mouka Foam Distributor</span></div></div>
       <p>Enugu State's most trusted authorized Mouka Foam distributor since 2009. No. 4 Old Oturukpo Road, Obollo-Afor, Enugu. Quality &amp; value delivered.</p>
       <div class="socs">
-        <a class="soc" href="https://facebook.com" target="_blank" rel="noopener">f</a>
-        <a class="soc" href="https://instagram.com" target="_blank" rel="noopener">in</a>
-        <a class="soc" href="https://wa.me/2348068522444" target="_blank" rel="noopener">W</a>
-        <a class="soc" href="tel:+2348068522444">☎</a>
+        <a class="soc" href="https://facebook.com" target="_blank" rel="noopener" title="Facebook">f</a>
+        <a class="soc" href="https://instagram.com" target="_blank" rel="noopener" title="Instagram">in</a>
+        <a class="soc" href="https://wa.me/2348068522444" target="_blank" rel="noopener" title="WhatsApp">W</a>
+        <a class="soc" href="tel:+2348068522444" title="Call Us">☎</a>
       </div>
     </div>
-    <div class="fcol">
-      <h4>Products</h4>
-      <ul>
-        <li><a onclick="showPage('home');scrollTo('#products')">Maxicool Mattress</a></li>
-        <li><a onclick="showPage('home');scrollTo('#products')">Classique Mattress</a></li>
-        <li><a onclick="showPage('home');scrollTo('#products')">Restabeds Mattress</a></li>
-        <li><a onclick="showPage('home');scrollTo('#products')">Comfort Pillows</a></li>
-        <li><a onclick="showPage('home');scrollTo('#products')">Memory Foam Toppers</a></li>
-        <li><a onclick="showPage('home');scrollTo('#products')">Wholesale Bundles</a></li>
-      </ul>
-    </div>
-    <div class="fcol">
-      <h4>Company</h4>
-      <ul>
-        <li><a onclick="showPage('about-page')">About Us</a></li>
-        <li><a onclick="showPage('reviews-page')">Reviews</a></li>
-        <li><a onclick="showPage('contact-page')">Contact</a></li>
-        <li><a onclick="showPage('faq-page')">FAQ</a></li>
-        <li><a onclick="showPage('contact-page')">Wholesale Enquiry</a></li>
-      </ul>
-    </div>
-    <div class="fcol">
-      <h4>Contact Us</h4>
-      <ul>
-        <li><a href="tel:+2348068522444">📞 0806 852 2444</a></li>
-        <li><a href="tel:+2348036206500">📞 0803 620 6500</a></li>
-        <li><a href="tel:+2348118722788">📞 0811 872 2788</a></li>
-        <li><a href="https://wa.me/2348068522444" target="_blank">💬 WhatsApp Orders</a></li>
-        <li><a onclick="showPage('faq-page')">Delivery Info</a></li>
-        <li><a onclick="showPage('faq-page')">Returns Policy</a></li>
-      </ul>
-    </div>
+    <div class="fcol"><h4>Products</h4><ul>
+      <li><a onclick="go('home');later('#products')">Maxicool Mattress</a></li>
+      <li><a onclick="go('home');later('#products')">Classique Mattress</a></li>
+      <li><a onclick="go('home');later('#products')">Restabeds Mattress</a></li>
+      <li><a onclick="go('home');later('#products')">Comfort Pillows</a></li>
+      <li><a onclick="go('home');later('#products')">Memory Foam Toppers</a></li>
+      <li><a onclick="go('home');later('#products')">Wholesale Bundles</a></li>
+    </ul></div>
+    <div class="fcol"><h4>Company</h4><ul>
+      <li><a onclick="go('about')">About Us</a></li>
+      <li><a onclick="go('reviews')">Reviews</a></li>
+      <li><a onclick="go('contact')">Contact</a></li>
+      <li><a onclick="go('faq')">FAQ</a></li>
+      <li><a onclick="go('contact')">Wholesale Enquiry</a></li>
+    </ul></div>
+    <div class="fcol"><h4>Contact Us</h4><ul>
+      <li><a href="tel:+2348068522444">📞 0806 852 2444</a></li>
+      <li><a href="tel:+2348036206500">📞 0803 620 6500</a></li>
+      <li><a href="tel:+2348118722788">📞 0811 872 2788</a></li>
+      <li><a href="https://wa.me/2348068522444" target="_blank">💬 WhatsApp Orders</a></li>
+      <li><a onclick="go('faq')">Delivery Info</a></li>
+      <li><a onclick="go('faq')">Returns Policy</a></li>
+    </ul></div>
   </div>
   <div class="fbot">
     <p>© 2025 IG NICE &amp; SONS. All rights reserved. No. 4 Old Oturukpo Road, Obollo-Afor, Enugu State. Authorized <a href="https://mouka.com" target="_blank" rel="noopener">Mouka Foam</a> Distributor.</p>
@@ -946,23 +1068,23 @@ a{text-decoration:none;color:inherit}
 </footer>
 
 <!-- LOGIN MODAL -->
-<div class="overlay" id="overlay">
+<div class="overlay" id="ov">
   <div class="modal">
     <button class="mc" onclick="closeLogin()">&#215;</button>
-    <div class="mhd"><div class="mi">IG</div><h2>IG NICE &amp; SONS</h2><p>Your Mouka Foam Account</p></div>
+    <div class="mhd"><div class="mico">IG</div><h2>IG NICE &amp; SONS</h2><p>Your Mouka Foam Account</p></div>
     <div class="mtabs">
-      <button class="mtab on" id="t1" onclick="switchTab('login')">Login</button>
-      <button class="mtab" id="t2" onclick="switchTab('register')">Register</button>
+      <button class="mtab on" id="t1" onclick="swTab('login')">Login</button>
+      <button class="mtab" id="t2" onclick="swTab('reg')">Register</button>
     </div>
     <!-- LOGIN -->
     <div id="loginWrap">
-      <div id="lstat" class="lst"></div>
+      <div id="lStat" class="lst"></div>
       <div class="mform">
-        <div class="fg"><label>Email Address</label><input type="email" id="lEmail" placeholder="your@email.com" autocomplete="email"/></div>
-        <div class="fg"><label>Password</label><input type="password" id="lPass" placeholder="••••••••" autocomplete="current-password"/><span class="frg" onclick="forgotPass()">Forgot password?</span></div>
+        <div class="fg"><label>Email Address</label><input type="email" id="lEm" placeholder="your@email.com" autocomplete="email"/></div>
+        <div class="fg"><label>Password</label><input type="password" id="lPw" placeholder="••••••••" autocomplete="current-password"/><span class="frg" onclick="resetPw()">Forgot password?</span></div>
         <button class="lbtn" id="lBtn" onclick="doLogin()">Login to Account</button>
-        <div class="orl">or</div>
-        <button class="gbtn" id="gBtn" onclick="doGoogleLogin()">
+        <div class="orl">or sign in with</div>
+        <button class="gbtn" onclick="doGoogle()">
           <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
           Continue with Google
         </button>
@@ -970,18 +1092,18 @@ a{text-decoration:none;color:inherit}
     </div>
     <!-- REGISTER -->
     <div id="regWrap" style="display:none">
-      <div id="rstat" class="lst"></div>
+      <div id="rStat" class="lst"></div>
       <div class="mform">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div class="fg"><label>First Name *</label><input type="text" id="rFirst" placeholder="John" autocomplete="given-name"/></div>
-          <div class="fg"><label>Last Name *</label><input type="text" id="rLast" placeholder="Doe" autocomplete="family-name"/></div>
+          <div class="fg"><label>First Name *</label><input type="text" id="rFn" placeholder="John" autocomplete="given-name"/></div>
+          <div class="fg"><label>Last Name *</label><input type="text" id="rLn" placeholder="Doe" autocomplete="family-name"/></div>
         </div>
-        <div class="fg"><label>Email *</label><input type="email" id="rEmail" placeholder="your@email.com" autocomplete="email"/></div>
-        <div class="fg"><label>Phone *</label><input type="tel" id="rPhone" placeholder="+234 xxx xxx xxxx" autocomplete="tel"/></div>
-        <div class="fg"><label>Password * <small style="color:var(--g500);font-weight:400">(min 6 chars)</small></label><input type="password" id="rPass" placeholder="Create a password" autocomplete="new-password"/></div>
-        <button class="lbtn" id="rBtn" onclick="doRegister()">Create Account</button>
-        <div class="orl">or</div>
-        <button class="gbtn" onclick="doGoogleLogin()">
+        <div class="fg"><label>Email *</label><input type="email" id="rEm" placeholder="your@email.com" autocomplete="email"/></div>
+        <div class="fg"><label>Phone *</label><input type="tel" id="rPh" placeholder="+234 xxx xxx xxxx" autocomplete="tel"/></div>
+        <div class="fg"><label>Password * <small style="font-weight:400;color:var(--g500)">(min 6 chars)</small></label><input type="password" id="rPw" placeholder="Create a password" autocomplete="new-password"/></div>
+        <button class="lbtn" id="rBtn" onclick="doReg()">Create Account</button>
+        <div class="orl">or sign up with</div>
+        <button class="gbtn" onclick="doGoogle()">
           <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
           Sign up with Google
         </button>
@@ -990,306 +1112,375 @@ a{text-decoration:none;color:inherit}
   </div>
 </div>
 
-<!-- WA FAB -->
+<!-- WA FAB + BACK TOP -->
 <a class="wafab" href="https://wa.me/2348068522444?text=Good%20day%2C%20I%20will%20be%20needing%20a%20Mouka%20Foam%20product.%20My%20name%20is%20" target="_blank" rel="noopener" title="WhatsApp">
   <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
 </a>
 <button class="bktop" id="bktop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
 
+<!-- ══════════════════════════════
+     JAVASCRIPT
+══════════════════════════════ -->
 <script>
-// ══════════════════════════════
-//  FIREBASE READY WAIT
-// ══════════════════════════════
-function waitForFB(cb, tries=0) {
-  if (window._fb) { cb(); }
-  else if (tries < 50) { setTimeout(()=>waitForFB(cb,tries+1), 100); }
-  else { console.warn('Firebase not loaded'); }
+// ── Wait for Firebase ──
+function fb(cb){
+  if(window._fb){cb();}
+  else{setTimeout(()=>fb(cb),80);}
 }
 
-// ══════════════════════════════
-//  PAGES SYSTEM
-// ══════════════════════════════
-const PAGES = ['home','reviews-page','about-page','contact-page','faq-page','profile-page'];
-function showPage(id) {
-  PAGES.forEach(p => {
-    const el = document.getElementById('page-'+p);
-    if(el) el.classList.toggle('active', p===id);
+// ── Page Navigation ──
+const PAGES=['home','reviews','about','contact','faq','profile'];
+function go(id){
+  PAGES.forEach(p=>{
+    document.getElementById('pg-'+p)?.classList.toggle('on',p===id);
   });
   window.scrollTo({top:0,behavior:'smooth'});
-  // Load reviews when visiting reviews page
-  if(id==='reviews-page') loadReviews();
-  if(id==='profile-page') loadProfilePage();
-  // Show footer only on appropriate pages
-  const noFooter=['profile-page'];
-  document.getElementById('mainFooter').style.display = noFooter.includes(id)?'none':'block';
+  document.getElementById('footer').style.display = (id==='profile')?'none':'block';
+  if(id==='reviews') loadRevs();
+  if(id==='profile') loadProf();
 }
-function scrollTo(selector) {
-  const el = document.querySelector(selector);
-  if(el) el.scrollIntoView({behavior:'smooth'});
-}
+function later(sel){setTimeout(()=>{ document.querySelector(sel)?.scrollIntoView({behavior:'smooth'}); },200);}
 
-// ══════════════════════════════
-//  NAVBAR
-// ══════════════════════════════
-const navEl = document.getElementById('nav');
-const bktop = document.getElementById('bktop');
+// ── Navbar scroll ──
 window.addEventListener('scroll',()=>{
-  navEl.classList.toggle('sc', window.scrollY>50);
-  bktop.classList.toggle('sh', window.scrollY>400);
+  document.getElementById('nav').classList.toggle('sc',scrollY>50);
+  document.getElementById('bktop').classList.toggle('sh',scrollY>400);
 },{passive:true});
 
-const hamEl = document.getElementById('ham');
-const mnavEl = document.getElementById('mnav');
-function toggleNav() {
-  const op = mnavEl.classList.toggle('op');
-  hamEl.classList.toggle('op', op);
-  document.body.style.overflow = op?'hidden':'';
+// ── Mobile Nav ──
+function toggleMnav(){
+  const m=document.getElementById('mnav'),h=document.getElementById('ham');
+  const op=m.classList.toggle('op');
+  h.classList.toggle('op',op);
+  document.body.style.overflow=op?'hidden':'';
 }
 
-// ══════════════════════════════
-//  AUTH STATE
-// ══════════════════════════════
-window.onUserChange = function(user) {
-  updateNavAuth(user);
-  updateReviewBox(user);
+// ── Auth State ──
+window._onUser = function(user){
+  renderAuthArea(user);
+  updateRevBox(user);
+  // If profile page is showing, render it now
+  if(document.getElementById('pg-profile')?.classList.contains('on')){
+    if(typeof window._renderProf === 'function') window._renderProf(user);
+  }
+  // Update mobile nav link
+  const lnk=document.getElementById('mnAuthLink');
+  if(lnk){
+    if(user){ lnk.textContent='👤 My Profile'; lnk.onclick=()=>{go('profile');toggleMnav()}; }
+    else { lnk.textContent='👤 Login / Register'; lnk.onclick=()=>{openLogin();toggleMnav()}; }
+  }
 };
 
-function updateNavAuth(user) {
-  const area = document.getElementById('navAuthArea');
-  const mnLink = document.getElementById('mnProfileLink');
-  if(user) {
-    const initial = (user.displayName||user.email||'U')[0].toUpperCase();
-    const photo = user.photoURL;
-    area.innerHTML = `<button class="profile-nav-btn" onclick="showPage('profile-page')">
-      ${photo?`<img src="${photo}" alt="${initial}"/>`:`<div class="pav">${initial}</div>`}
-      ${user.displayName||user.email.split('@')[0]}
+function getName(user){
+  if(!user) return '';
+  return user.displayName ||
+    (user.providerData?.[0]?.displayName) ||
+    user.email?.split('@')[0] || 'Customer';
+}
+function getInitial(user){ return (getName(user)||'?')[0].toUpperCase(); }
+
+function renderAuthArea(user){
+  const a=document.getElementById('authArea');
+  if(user){
+    const name=getName(user), init=getInitial(user), photo=user.photoURL||'';
+    a.innerHTML=`<button class="prof-btn" onclick="go('profile')">
+      <div class="pav-sm">${photo?`<img src="${photo}" alt="${init}" onerror="this.parentElement.textContent='${init}'">`:`${init}`}</div>
+      ${name.split(' ')[0]}
     </button>`;
-    if(mnLink) { mnLink.textContent = '👤 My Profile'; mnLink.onclick = ()=>{showPage('profile-page');toggleNav();}; }
   } else {
-    area.innerHTML = `<button class="btn-gh" onclick="openLogin()">Login</button>`;
-    if(mnLink) { mnLink.textContent = '👤 Login / Register'; mnLink.onclick = ()=>{openLogin();toggleNav();}; }
+    a.innerHTML=`<button class="btn-login" onclick="openLogin()">Login</button>`;
   }
 }
 
-// ══════════════════════════════
-//  LOGIN MODAL
-// ══════════════════════════════
-const ovEl = document.getElementById('overlay');
-function openLogin() { ovEl.classList.add('on'); document.body.style.overflow='hidden'; }
-function closeLogin() { ovEl.classList.remove('on'); document.body.style.overflow=''; }
-ovEl.addEventListener('click', e=>{ if(e.target===ovEl) closeLogin(); });
+// ── Modal ──
+const ov=document.getElementById('ov');
+function openLogin(){ ov.classList.add('on'); document.body.style.overflow='hidden'; }
+function closeLogin(){ ov.classList.remove('on'); document.body.style.overflow=''; }
+ov.addEventListener('click',e=>{ if(e.target===ov) closeLogin(); });
 
-function switchTab(t) {
-  const isL = t==='login';
-  document.getElementById('loginWrap').style.display = isL?'block':'none';
-  document.getElementById('regWrap').style.display   = isL?'none':'block';
+function swTab(t){
+  const isL=t==='login';
+  document.getElementById('loginWrap').style.display=isL?'block':'none';
+  document.getElementById('regWrap').style.display=isL?'none':'block';
   document.getElementById('t1').classList.toggle('on',isL);
   document.getElementById('t2').classList.toggle('on',!isL);
-  setS('lstat','',''); setS('rstat','','');
+  clrStat();
 }
-function setS(id,msg,type) {
-  const el=document.getElementById(id);
-  if(!el)return;
+function clrStat(){ setStat('lStat','',''); setStat('rStat','',''); }
+function setStat(id,msg,type){
+  const el=document.getElementById(id); if(!el)return;
   el.textContent=msg; el.className='lst'+(type?' '+type:'');
   el.style.display=msg?'block':'none';
 }
-function setBtnLoad(id,loading,label) {
-  const btn=document.getElementById(id);
-  if(!btn)return;
-  btn.disabled=loading;
-  btn.innerHTML=loading?`<span class="spin"></span> Please wait...`:label;
+function setBtnLoad(id,on,label){
+  const b=document.getElementById(id); if(!b)return;
+  b.disabled=on; b.innerHTML=on?`<span class="spin"></span>Please wait...`:label;
 }
 
-// EMAIL LOGIN
-function doLogin() {
-  waitForFB(async()=>{
-    const email=document.getElementById('lEmail').value.trim();
-    const pass =document.getElementById('lPass').value;
-    if(!email||!pass){setS('lstat','Please fill in all fields.','err');return}
+// ── Email Login ──
+function doLogin(){
+  fb(async()=>{
+    const em=document.getElementById('lEm').value.trim();
+    const pw=document.getElementById('lPw').value;
+    if(!em||!pw){setStat('lStat','Please fill in all fields.','err');return}
     setBtnLoad('lBtn',true,'Login to Account');
-    try {
-      await window._fb.signInWithEmailAndPassword(window._fb.auth,email,pass);
-      setS('lstat','✅ Logged in! Redirecting...','ok');
-      setTimeout(()=>{closeLogin();showPage('profile-page');},1200);
-    } catch(e) {
-      const msg = e.code==='auth/user-not-found'?'No account with this email.':
-                  e.code==='auth/wrong-password'?'Incorrect password.':
-                  e.code==='auth/invalid-email'?'Invalid email address.':'Login failed. Try again.';
-      setS('lstat',msg,'err');
-    } finally { setBtnLoad('lBtn',false,'Login to Account'); }
+    try{
+      await window._fb.signInWithEmailAndPassword(window._fb.auth,em,pw);
+      setStat('lStat','✅ Logged in! Redirecting...','ok');
+      setTimeout(()=>{closeLogin();go('profile');},1200);
+    }catch(e){
+      const m=e.code==='auth/user-not-found'||e.code==='auth/invalid-credential'?'No account found with this email.':
+              e.code==='auth/wrong-password'?'Incorrect password.':
+              e.code==='auth/invalid-email'?'Invalid email address.':
+              e.code==='auth/too-many-requests'?'Too many attempts. Try again later.':
+              'Login failed. Please try again.';
+      setStat('lStat',m,'err');
+    }finally{setBtnLoad('lBtn',false,'Login to Account');}
   });
 }
 
-// EMAIL REGISTER
-function doRegister() {
-  waitForFB(async()=>{
-    const first=document.getElementById('rFirst').value.trim();
-    const last =document.getElementById('rLast').value.trim();
-    const email=document.getElementById('rEmail').value.trim();
-    const phone=document.getElementById('rPhone').value.trim();
-    const pass =document.getElementById('rPass').value;
-    if(!first||!last||!email||!phone||!pass){setS('rstat','Please fill in all required fields.','err');return}
-    if(pass.length<6){setS('rstat','Password must be at least 6 characters.','err');return}
+// ── Email Register ──
+function doReg(){
+  fb(async()=>{
+    const fn=document.getElementById('rFn').value.trim();
+    const ln=document.getElementById('rLn').value.trim();
+    const em=document.getElementById('rEm').value.trim();
+    const ph=document.getElementById('rPh').value.trim();
+    const pw=document.getElementById('rPw').value;
+    if(!fn||!ln||!em||!ph||!pw){setStat('rStat','Please fill in all required fields.','err');return}
+    if(pw.length<6){setStat('rStat','Password must be at least 6 characters.','err');return}
+    if(!/\S+@\S+\.\S+/.test(em)){setStat('rStat','Please enter a valid email address.','err');return}
     setBtnLoad('rBtn',true,'Create Account');
-    try {
-      const cred = await window._fb.createUserWithEmailAndPassword(window._fb.auth,email,pass);
-      const displayName = first+' '+last;
-      await window._fb.updateProfile(cred.user,{displayName});
-      // Save extra info to Firestore
+    try{
+      const cred=await window._fb.createUserWithEmailAndPassword(window._fb.auth,em,pw);
+      await window._fb.updateProfile(cred.user,{displayName:fn+' '+ln});
       await window._fb.setDoc(window._fb.doc(window._fb.db,'users',cred.user.uid),{
-        firstName:first,lastName:last,email,phone,displayName,createdAt:window._fb.serverTimestamp()
+        firstName:fn,lastName:ln,displayName:fn+' '+ln,
+        email:em,phone:ph,createdAt:window._fb.serverTimestamp()
       });
-      setS('rstat','✅ Account created! Welcome, '+first+'!','ok');
-      setTimeout(()=>{closeLogin();showPage('profile-page');},1200);
-    } catch(e) {
-      const msg = e.code==='auth/email-already-in-use'?'An account with this email already exists.':
-                  e.code==='auth/invalid-email'?'Invalid email address.':'Registration failed. Try again.';
-      setS('rstat',msg,'err');
-    } finally { setBtnLoad('rBtn',false,'Create Account'); }
+      setStat('rStat','✅ Account created! Welcome, '+fn+'!','ok');
+      setTimeout(()=>{closeLogin();go('profile');},1300);
+    }catch(e){
+      const m=e.code==='auth/email-already-in-use'?'An account with this email already exists.':
+              e.code==='auth/invalid-email'?'Invalid email address.':
+              'Registration failed. Please try again.';
+      setStat('rStat',m,'err');
+    }finally{setBtnLoad('rBtn',false,'Create Account');}
   });
 }
 
-// GOOGLE LOGIN
-function doGoogleLogin() {
-  waitForFB(async()=>{
-    try {
-      const result = await window._fb.signInWithPopup(window._fb.auth, window._fb.gprov);
+// ── GOOGLE LOGIN ──
+function doGoogle(){
+  fb(async()=>{
+    clrStat();
+    // Determine which status element to use
+    const isLoginTab = document.getElementById('loginWrap').style.display !== 'none';
+    const statId = isLoginTab ? 'lStat' : 'rStat';
+    try{
+      window._fb.gp.setCustomParameters({ prompt: 'select_account' });
+      const result = await window._fb.signInWithPopup(window._fb.auth, window._fb.gp);
       const user = result.user;
-      // Save to Firestore if new user
-      const uref = window._fb.doc(window._fb.db,'users',user.uid);
-      const snap = await window._fb.getDoc(uref);
-      if(!snap.exists()) {
-        const parts=(user.displayName||'').split(' ');
-        await window._fb.setDoc(uref,{
-          firstName:parts[0]||'',lastName:parts.slice(1).join(' ')||'',
-          email:user.email,displayName:user.displayName||user.email,
-          photo:user.photoURL||'',createdAt:window._fb.serverTimestamp()
-        });
+      // Save/update in Firestore
+      try{
+        const uref = window._fb.doc(window._fb.db,'users',user.uid);
+        const snap = await window._fb.getDoc(uref);
+        const parts = (user.displayName||'').split(' ');
+        if(!snap.exists()){
+          await window._fb.setDoc(uref,{
+            firstName: parts[0]||'', lastName: parts.slice(1).join(' ')||'',
+            displayName: user.displayName||user.email,
+            email: user.email, photo: user.photoURL||'',
+            provider: 'google', createdAt: window._fb.serverTimestamp()
+          });
+        } else {
+          await window._fb.setDoc(uref,{
+            photo: user.photoURL||'', displayName: user.displayName||user.email,
+            lastLogin: window._fb.serverTimestamp()
+          },{merge:true});
+        }
+      }catch(dbErr){ console.log('Firestore (non-fatal):',dbErr); }
+      setStat(statId,'✅ Signed in with Google! Redirecting...','ok');
+      setTimeout(()=>{ closeLogin(); go('profile'); }, 1000);
+    }catch(e){
+      console.error('Google login:',e.code, e.message);
+      let m;
+      switch(e.code){
+        case 'auth/popup-closed-by-user':
+        case 'auth/cancelled-popup-request':
+          m='Sign-in was cancelled. Please try again.'; break;
+        case 'auth/popup-blocked':
+          m='⚠️ Popup was blocked by your browser. Please allow popups for this site, then try again.'; break;
+        case 'auth/network-request-failed':
+          m='Network error. Please check your internet connection.'; break;
+        case 'auth/unauthorized-domain':
+          m='⚠️ This website domain is not authorized for Google sign-in. Please add it in Firebase Console → Authentication → Settings → Authorized Domains.'; break;
+        case 'auth/operation-not-allowed':
+          m='Google sign-in is not enabled. Please enable it in Firebase Console → Authentication → Sign-in methods.'; break;
+        default:
+          m='Google sign-in failed. Please use email login instead, or try again.';
       }
-      closeLogin();
-      showPage('profile-page');
-    } catch(e) {
-      const id = document.getElementById('lstat')?.style.display!==undefined?'lstat':'rstat';
-      const msg = e.code==='auth/popup-closed-by-user'?'Google sign-in was cancelled.':
-                  e.code==='auth/popup-blocked'?'Popup was blocked. Please allow popups and try again.':
-                  'Google sign-in failed. Please try email login instead.';
-      setS(id,msg,'err');
+      setStat(statId, m, 'err');
     }
   });
 }
 
-function forgotPass() {
-  waitForFB(async()=>{
-    const email=document.getElementById('lEmail').value.trim();
-    if(!email){setS('lstat','Enter your email above first.','err');return}
-    try {
-      // Firebase sendPasswordResetEmail if available
-      if(window._fb.auth.sendPasswordResetEmail) {
-        await window._fb.auth.sendPasswordResetEmail(email);
-      }
-      setS('lstat','✅ Password reset email sent! Check your inbox.','ok');
-    } catch(e) {
-      setS('lstat','Could not send reset email. Please contact us on WhatsApp.','err');
+// ── Forgot Password ──
+function resetPw(){
+  fb(async()=>{
+    const em=document.getElementById('lEm').value.trim();
+    if(!em){setStat('lStat','Enter your email address above first.','err');return}
+    try{
+      await window._fb.sendPasswordResetEmail(window._fb.auth,em);
+      setStat('lStat','✅ Password reset email sent! Check your inbox.','ok');
+    }catch(e){
+      setStat('lStat','Could not send reset email. Please contact us on WhatsApp.','err');
     }
   });
 }
 
-// LOGOUT
-function doLogout() {
-  waitForFB(async()=>{
-    if(!confirm('Are you sure you want to log out?')) return;
-    await window._fb.signOut(window._fb.auth);
-    showPage('home');
-  });
+// ── Logout ──
+function doLogout(){
+  if(!confirm('Are you sure you want to log out?')) return;
+  fb(async()=>{ await window._fb.signOut(window._fb.auth); go('home'); });
 }
 
-// ══════════════════════════════
-//  PROFILE PAGE
-// ══════════════════════════════
-async function loadProfilePage() {
-  const user = window._currentUser;
-  if(!user){showPage('home');openLogin();return}
+// ── PROFILE PAGE ──
+// Called by go('profile') — waits for auth to resolve if needed
+function loadProf(){
+  if(window._authResolved){
+    window._renderProf(window._user);
+  } else {
+    // Auth hasn't fired yet — show subtle loading and wait
+    document.getElementById('pName').textContent='Loading...';
+    document.getElementById('pEmail').textContent='';
+    const waitAndRender = setInterval(()=>{
+      if(window._authResolved){
+        clearInterval(waitAndRender);
+        window._renderProf(window._user);
+      }
+    }, 100);
+    // Safety timeout — 5s
+    setTimeout(()=>clearInterval(waitAndRender), 5000);
+  }
+}
 
-  const name = user.displayName||user.email.split('@')[0];
-  const initial = name[0].toUpperCase();
-  const av = document.getElementById('profAv');
-  if(user.photoURL) av.innerHTML=`<img src="${user.photoURL}" alt="${initial}"/>`;
-  else av.textContent=initial;
-
-  document.getElementById('profName').textContent = name;
-  document.getElementById('profEmail').textContent = user.email;
-  document.getElementById('peName').value = name;
-  document.getElementById('peEmail').value = user.email;
-
-  // Load from Firestore
-  waitForFB(async()=>{
-    try {
+window._renderProf = function(user){
+  if(!user){
+    // Not logged in — redirect to home and open login
+    go('home');
+    setTimeout(openLogin, 400);
+    return;
+  }
+  const name  = getName(user);
+  const init  = getInitial(user);
+  const photo = user.photoURL || '';
+  // ── Banner ──
+  const avEl = document.getElementById('pAvLg');
+  if(photo){
+    avEl.innerHTML=`<img src="${photo}" alt="${init}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.parentElement.textContent='${init}'"/>`;
+  } else {
+    avEl.textContent = init;
+  }
+  document.getElementById('pName').textContent  = name;
+  document.getElementById('pEmail').textContent = user.email || '';
+  // ── Determine provider badge ──
+  const provider = user.providerData?.[0]?.providerId || '';
+  const provBadge = document.getElementById('provBadge');
+  if(provBadge){
+    provBadge.textContent = provider.includes('google') ? '🟢 Signed in with Google' :
+                            provider.includes('password') ? '🔑 Email Account' : '✅ Verified Customer';
+  }
+  // ── Edit form defaults ──
+  document.getElementById('peName').value  = name;
+  document.getElementById('peEmail').value = user.email || '';
+  // ── Load extra Firestore data ──
+  fb(async()=>{
+    try{
       const snap = await window._fb.getDoc(window._fb.doc(window._fb.db,'users',user.uid));
-      if(snap.exists()) {
-        const d=snap.data();
-        if(d.phone) document.getElementById('pePhone').value=d.phone;
-        if(d.address) document.getElementById('peAddr').value=d.address;
+      if(snap.exists()){
+        const d = snap.data();
+        if(d.phone)   document.getElementById('pePhone').value = d.phone;
+        if(d.address) document.getElementById('peAddr').value  = d.address;
       }
-    } catch(e){}
-    // Count reviews
-    try {
+    }catch(e){ console.log('Firestore profile load:',e); }
+    // ── Count reviews ──
+    try{
       const qs = await window._fb.getDocs(window._fb.collection(window._fb.db,'reviews'));
       const myRevs = qs.docs.filter(d=>d.data().uid===user.uid);
-      document.getElementById('myRevCount').textContent = myRevs.length;
-    } catch(e){}
+      const n = myRevs.length;
+      const cnt = document.getElementById('myRevCnt');
+      if(cnt) cnt.textContent = n;
+      const feed = document.getElementById('actFeed');
+      if(feed){
+        feed.innerHTML = n > 0
+          ? `<div style="background:var(--gl);border-radius:var(--rs);padding:14px;border-left:4px solid var(--g)">
+               <p style="font-size:.88rem;color:var(--g700)">✅ You have written <strong>${n}</strong> review${n>1?'s':''}. Thank you for your feedback!</p>
+             </div>`
+          : `<div style="background:#fff8e1;border-radius:var(--rs);padding:14px;border-left:4px solid var(--gold)">
+               <p style="font-size:.88rem;color:var(--g700)">You haven't written any reviews yet.</p>
+               <a style="color:var(--g);font-size:.84rem;font-weight:700;cursor:pointer;margin-top:6px;display:inline-block" onclick="go('reviews')">Write your first review →</a>
+             </div>`;
+      }
+    }catch(e){}
   });
-}
+};
 
-async function saveProfile() {
-  const user = window._currentUser;
-  if(!user)return;
-  const name  = document.getElementById('peName').value.trim();
-  const phone = document.getElementById('pePhone').value.trim();
-  const addr  = document.getElementById('peAddr').value.trim();
-  const el    = document.getElementById('peStatus');
-  el.style.display='block'; el.textContent='Saving...'; el.style.color='var(--g500)';
-  waitForFB(async()=>{
-    try {
+function saveProf(){
+  const user=window._user; if(!user) return;
+  const name=document.getElementById('peName').value.trim();
+  const phone=document.getElementById('pePhone').value.trim();
+  const addr=document.getElementById('peAddr').value.trim();
+  const msg=document.getElementById('peMsg');
+  msg.className='ps-msg'; msg.textContent='Saving...'; msg.style.display='block';
+  fb(async()=>{
+    try{
       await window._fb.updateProfile(user,{displayName:name});
-      await window._fb.updateDoc(window._fb.doc(window._fb.db,'users',user.uid),{displayName:name,phone,address:addr});
-      el.textContent='✅ Profile saved!'; el.style.color='var(--g)';
-      document.getElementById('profName').textContent=name;
-      updateNavAuth(user);
-    } catch(e){ el.textContent='Failed to save. Try again.'; el.style.color='#c0392b'; }
-    setTimeout(()=>{el.style.display='none'},3000);
+      await window._fb.setDoc(window._fb.doc(window._fb.db,'users',user.uid),
+        {displayName:name,phone,address:addr,updatedAt:window._fb.serverTimestamp()},{merge:true});
+      msg.className='ps-msg ok'; msg.textContent='✅ Profile saved successfully!';
+      document.getElementById('pName').textContent=name;
+      renderAuthArea(user);
+    }catch(e){ msg.className='ps-msg err'; msg.textContent='Failed to save. Please try again.'; }
+    setTimeout(()=>{msg.style.display='none';},3000);
   });
 }
 
-function openSupport() {
-  window.open('https://wa.me/2348068522444?text=Good%20day%2C%20I%20need%20customer%20support.%20My%20name%20is%20'+encodeURIComponent(window._currentUser?.displayName||''),'_blank');
+function showPTab(id,btn){
+  document.querySelectorAll('.ptab2').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  document.querySelectorAll('.prof-panel').forEach(p=>p.classList.remove('on'));
+  document.getElementById('pp-'+id)?.classList.add('on');
 }
 
-// ══════════════════════════════
-//  REVIEWS
-// ══════════════════════════════
-let selectedStars = 5;
-function setStars(n) {
-  selectedStars=n;
-  document.querySelectorAll('#starPick span').forEach((s,i)=>{
-    s.textContent = i<n?'★':'☆';
-    s.classList.toggle('sel',i<n);
+function callSupport(){
+  const name=getName(window._user)||'';
+  window.open('https://wa.me/2348068522444?text=Good%20day%2C%20I%20need%20customer%20support.%20My%20name%20is%20'+encodeURIComponent(name),'_blank');
+}
+
+// ── REVIEWS ──
+let selStars=5;
+function setStar(n){
+  selStars=n;
+  document.querySelectorAll('#starRow span').forEach((s,i)=>{
+    s.classList.toggle('on',i<n);
+    s.style.transform=i<n?'scale(1.1)':'scale(1)';
   });
 }
-setStars(5);
+setStar(5);
 
-function updateReviewBox(user) {
-  const lp = document.getElementById('revLoginPrompt');
-  const rf = document.getElementById('revForm');
-  if(!lp||!rf) return;
-  if(user){ lp.style.display='none'; rf.style.display='block'; }
-  else { lp.style.display='block'; rf.style.display='none'; }
+function updateRevBox(user){
+  const lk=document.getElementById('revLocked');
+  const rf=document.getElementById('revForm');
+  if(!lk||!rf) return;
+  lk.style.display=user?'none':'block';
+  rf.style.display=user?'block':'none';
 }
 
-function starStr(n) { return '★'.repeat(n)+'☆'.repeat(5-n); }
-function timeAgo(ts) {
+function stStr(n){ return '★'.repeat(n)+'☆'.repeat(5-n); }
+function timeAgo(ts){
   if(!ts) return '';
-  const d = ts.toDate?ts.toDate():new Date(ts);
-  const diff = Date.now()-d.getTime();
+  const d=ts.toDate?ts.toDate():new Date(ts);
+  const diff=Date.now()-d.getTime();
   const mins=Math.floor(diff/60000),hrs=Math.floor(diff/3600000),days=Math.floor(diff/86400000);
   if(days>30) return d.toLocaleDateString('en-NG',{month:'short',year:'numeric'});
   if(days>0) return days+'d ago';
@@ -1297,86 +1488,83 @@ function timeAgo(ts) {
   if(mins>0) return mins+'m ago';
   return 'just now';
 }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-async function loadReviews() {
-  const grid = document.getElementById('allReviewsGrid');
-  if(!grid) return;
-  grid.innerHTML='<p style="text-align:center;color:var(--g500);padding:40px">Loading reviews...</p>';
-  waitForFB(async()=>{
-    try {
-      const q = window._fb.query(window._fb.collection(window._fb.db,'reviews'),window._fb.orderBy('createdAt','desc'));
-      const snap = await window._fb.getDocs(q);
-      const docs = snap.docs.map(d=>({id:d.id,...d.data()}));
-      if(docs.length===0){
-        // Show default 3 plus prompt
-        grid.innerHTML = defaultReviewsHTML() + `<div style="grid-column:1/-1;text-align:center;padding:20px;background:var(--gl);border-radius:var(--r);border:2px dashed var(--g300)"><p style="color:var(--g500);font-size:.9rem">Be the first to write a review above! 👆</p></div>`;
-        return;
-      }
-      grid.innerHTML = defaultReviewsHTML() + docs.map(rev=>{
-        const init = (rev.name||'?')[0].toUpperCase();
-        const photo = rev.photo||'';
+function defaultRevs(){
+  return `
+  <div class="rcard"><div class="rsts">★★★★★</div><p>Best mattress purchase I've ever made. The Maxicool is worth every naira — my back pain is gone after 3 weeks!</p><div class="rath"><div class="rav">AO</div><div><div class="ran">Amaka Okonkwo</div><div class="ral">Obollo-Afor, Enugu</div></div><div class="rdt">Jan 2025</div></div></div>
+  <div class="rcard"><div class="rsts">★★★★★</div><p>Furnished all 40 rooms of our hotel. Wholesale pricing and delivery speed was absolutely impeccable!</p><div class="rath"><div class="rav">CT</div><div><div class="ran">Chukwudi Tochukwu</div><div class="ral">Hotel Manager, Enugu</div></div><div class="rdt">Feb 2025</div></div></div>
+  <div class="rcard"><div class="rsts">★★★★★</div><p>Ordered and delivered same day! IG NICE &amp; SONS is my permanent go-to for all Mouka foam products.</p><div class="rath"><div class="rav">FK</div><div><div class="ran">Fatima Kabiru</div><div class="ral">Nationwide Delivery</div></div><div class="rdt">Mar 2025</div></div></div>`;
+}
+
+async function loadRevs(){
+  const el=document.getElementById('allRevs'); if(!el) return;
+  el.innerHTML='<p style="text-align:center;color:var(--g500);padding:50px">Loading reviews...</p>';
+  fb(async()=>{
+    try{
+      const q=window._fb.query(window._fb.collection(window._fb.db,'reviews'),window._fb.orderBy('createdAt','desc'));
+      const snap=await window._fb.getDocs(q);
+      const docs=snap.docs.map(d=>({id:d.id,...d.data()}));
+      const custom=docs.map(rev=>{
+        const init=(rev.name||'?')[0].toUpperCase();
         return `<div class="rcard">
-          <div class="rstars">${starStr(rev.stars||5)}</div>
-          <p>${escHtml(rev.text)}</p>
-          <div class="rauth">
-            <div class="rav">${photo?`<img src="${photo}" alt="${init}"/>`:`${init}`}</div>
-            <div><div class="ran">${escHtml(rev.name||'Anonymous')}</div><div class="ral">${escHtml(rev.location||'Nigeria')}</div></div>
-            <div class="rdate">${timeAgo(rev.createdAt)}</div>
+          <div class="rsts">${stStr(rev.stars||5)}</div>
+          <p>${esc(rev.text)}</p>
+          <div class="rath">
+            <div class="rav">${rev.photo?`<img src="${rev.photo}" alt="${init}" onerror="this.parentElement.textContent='${init}'">`:`${init}`}</div>
+            <div><div class="ran">${esc(rev.name||'Anonymous')}</div><div class="ral">Verified Customer</div></div>
+            <div class="rdt">${timeAgo(rev.createdAt)}</div>
           </div>
         </div>`;
       }).join('');
-    } catch(e) {
-      grid.innerHTML = defaultReviewsHTML();
+      const total=3+docs.length;
+      el.innerHTML=`<div style="display:flex;align-items:center;gap:12px;margin-bottom:32px;flex-wrap:wrap">
+        <div style="font-family:var(--fd);font-size:2.4rem;font-weight:900;color:var(--g)">${total}+</div>
+        <div><div style="color:var(--gold);font-size:1.1rem;letter-spacing:2px">★★★★★</div><div style="font-size:.85rem;color:var(--g500)">reviews from verified customers</div></div>
+      </div>
+      <div class="rgrid">${defaultRevs()}${custom}</div>`;
+    }catch(e){
+      el.innerHTML=`<div class="rgrid">${defaultRevs()}</div>`;
     }
   });
 }
 
-function defaultReviewsHTML() {
-  return `
-    <div class="rcard"><div class="rstars">★★★★★</div><p>Best mattress purchase I've ever made. The Maxicool is worth every naira — my back pain is completely gone after 3 weeks!</p><div class="rauth"><div class="rav">AO</div><div><div class="ran">Amaka Okonkwo</div><div class="ral">Obollo-Afor, Enugu</div></div><div class="rdate">Jan 2025</div></div></div>
-    <div class="rcard"><div class="rstars">★★★★★</div><p>Furnished all 40 rooms of our hotel. Wholesale pricing and delivery speed was impeccable. Will order again!</p><div class="rauth"><div class="rav">CT</div><div><div class="ran">Chukwudi Tochukwu</div><div class="ral">Hotel Manager, Enugu</div></div><div class="rdate">Feb 2025</div></div></div>
-    <div class="rcard"><div class="rstars">★★★★★</div><p>Ordered and delivered same day! IG NICE &amp; SONS is my permanent go-to for all Mouka foam products now.</p><div class="rauth"><div class="rav">FK</div><div><div class="ran">Fatima Kabiru</div><div class="ral">Nationwide Delivery</div></div><div class="rdate">Mar 2025</div></div></div>
-  `;
-}
-
-function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-async function submitReview() {
-  const user = window._currentUser;
-  if(!user){openLogin();return}
-  const text = document.getElementById('revText').value.trim();
-  if(!text){alert('Please write something in your review!');return}
-  const btn = document.querySelector('#revForm .btn-sub');
-  const statEl = document.getElementById('revStatus');
-  statEl.style.display='block'; statEl.style.background='var(--gl)'; statEl.style.color='var(--g500)'; statEl.textContent='Posting...';
-  waitForFB(async()=>{
-    try {
+async function postReview(){
+  const user=window._user; if(!user){openLogin();return}
+  const text=document.getElementById('revTxt').value.trim();
+  if(!text){alert('Please write something!');return}
+  const stat=document.getElementById('revStat');
+  stat.style.display='block'; stat.style.background='var(--gl)'; stat.style.color='var(--g)'; stat.textContent='Posting...';
+  fb(async()=>{
+    try{
       await window._fb.addDoc(window._fb.collection(window._fb.db,'reviews'),{
-        uid: user.uid,
-        name: user.displayName||user.email.split('@')[0],
-        photo: user.photoURL||'',
-        email: user.email,
-        text,
-        stars: selectedStars,
-        location: 'Nigeria',
-        createdAt: window._fb.serverTimestamp()
+        uid:user.uid, name:getName(user), photo:user.photoURL||'',
+        email:user.email, text, stars:selStars,
+        createdAt:window._fb.serverTimestamp()
       });
-      statEl.style.background='#d4edda'; statEl.style.color='#155724'; statEl.textContent='✅ Review posted! Thank you!';
-      document.getElementById('revText').value='';
-      setStars(5);
-      setTimeout(()=>{statEl.style.display='none'; loadReviews();},2000);
-    } catch(e) {
-      statEl.style.background='#f8d7da'; statEl.style.color='#721c24'; statEl.textContent='Failed to post. Please try again.';
+      stat.style.background='#d4edda'; stat.style.color='#155724'; stat.textContent='✅ Review posted! Thank you!';
+      document.getElementById('revTxt').value=''; setStar(5);
+      setTimeout(()=>{stat.style.display='none'; loadRevs();},2000);
+    }catch(e){
+      stat.style.background='#f8d7da'; stat.style.color='#721c24'; stat.textContent='Failed to post. Please try again.';
     }
   });
 }
 
-// ══════════════════════════════
-//  CONTACT FORM
-// ══════════════════════════════
-function submitContactForm(e) {
+// ── PRODUCT FILTER ──
+function fp(cat,btn){
+  document.querySelectorAll('.ptab').forEach(b=>b.classList.remove('on')); btn.classList.add('on');
+  document.querySelectorAll('.pc').forEach(c=>{ c.style.display=(cat==='all'||c.dataset.cat===cat)?'block':'none'; });
+}
+
+// ── ORDER VIA WHATSAPP ──
+function oNow(name,price){
+  const msg=encodeURIComponent('Good day, I will be needing '+name+' ('+price+'). My name is ');
+  window.open('https://wa.me/2348068522444?text='+msg,'_blank');
+}
+
+// ── CONTACT FORM ──
+function sendOrder(e){
   e.preventDefault();
   const n=document.getElementById('cn').value.trim();
   const p=document.getElementById('cp').value.trim();
@@ -1386,96 +1574,69 @@ function submitContactForm(e) {
   const q=document.getElementById('cq').value;
   const m=document.getElementById('cm').value.trim();
   if(!n||!p||!a||!prod){alert('Please fill in all required fields.');return}
-  const btn=document.getElementById('cfBtn');
+  const btn=document.getElementById('cBtn');
   btn.textContent='⏳ Opening WhatsApp...'; btn.disabled=true;
   const msg=encodeURIComponent(
-    '🛒 *NEW ORDER — IG NICE & SONS*\n\n'+
-    '👤 *Name:* '+n+'\n📞 *Phone:* '+p+'\n📍 *Address:* '+a+'\n'+
-    '🛏️ *Product:* '+prod+'\n📐 *Size:* '+sz+'\n🔢 *Qty:* '+q+
-    (m?'\n💬 *Message:* '+m:'')+'\n\n_Sent from website_'
+    '🛒 *NEW ORDER — IG NICE & SONS*\n\n👤 *Name:* '+n+'\n📞 *Phone:* '+p+
+    '\n📍 *Address:* '+a+'\n🛏️ *Product:* '+prod+'\n📐 *Size:* '+sz+
+    '\n🔢 *Qty:* '+q+(m?'\n💬 *Message:* '+m:'')+'\n\n_Sent from ignice-and-sons.github.io_'
   );
   window.open('https://wa.me/2348068522444?text='+msg,'_blank');
-  setTimeout(()=>window.open('https://wa.me/2348036206500?text='+msg,'_blank'),1500);
-  setTimeout(()=>{btn.textContent='✅ Sent! We\'ll contact you shortly.';btn.style.background='var(--gm)';
+  setTimeout(()=>window.open('https://wa.me/2348036206500?text='+msg,'_blank'),1600);
+  setTimeout(()=>{
+    btn.textContent='✅ Sent! We\'ll contact you shortly.'; btn.style.background='var(--gm)';
     setTimeout(()=>{btn.textContent='🛒 Submit Order via WhatsApp';btn.style.background='';btn.disabled=false;e.target.reset();},5000);
   },2000);
 }
 
-// ══════════════════════════════
-//  ORDER NOW
-// ══════════════════════════════
-function orderNow(name,price) {
-  const msg=encodeURIComponent('Good day, I will be needing '+name+' ('+price+'). My name is ');
-  window.open('https://wa.me/2348068522444?text='+msg,'_blank');
-}
-
-// ══════════════════════════════
-//  PRODUCT FILTER
-// ══════════════════════════════
-function filterP(cat,btn) {
-  document.querySelectorAll('.ptab').forEach(b=>b.classList.remove('on'));
-  btn.classList.add('on');
-  document.querySelectorAll('.pc').forEach(c=>{c.style.display=(cat==='all'||c.dataset.cat===cat)?'block':'none';});
-}
-
-// ══════════════════════════════
-//  FAQ DATA
-// ══════════════════════════════
-const FAQS = [
-  {q:'What is Mouka Foam?',a:'Mouka Foam is Nigeria\'s leading foam manufacturer, producing high-quality mattresses, pillows, and foam products since 1959. IG NICE & SONS is an authorized distributor of genuine Mouka Foam products.'},
-  {q:'Where are you located?',a:'We are located at No. 4 Old Oturukpo Road, Obollo-Afor, Enugu State, Nigeria. Our showroom is open Monday–Saturday 8AM–7PM and Sunday 10AM–4PM.'},
-  {q:'Do you offer delivery?',a:'Yes! We offer same-day delivery within Obollo-Afor for orders placed before 3PM. We also deliver across Enugu State and nationwide. Delivery is FREE for orders above ₦50,000 within Obollo-Afor.'},
-  {q:'How do I place an order?',a:'You can order by: (1) Filling the contact form on our Contact page, (2) Clicking "Order Now" on any product to chat on WhatsApp, or (3) Calling us directly on +234 806 852 2444.'},
-  {q:'Are your products genuine Mouka?',a:'Absolutely. We are an authorized Mouka Foam distributor. Every product comes directly from Mouka\'s official supply chain and carries the manufacturer\'s warranty. We never stock counterfeits.'},
-  {q:'What sizes are available?',a:'We carry all standard sizes: Single (3×6), Double (4×6), Queen (4.5×6), King (5×6), and custom sizes on request for institutional orders.'},
-  {q:'Do you offer wholesale pricing?',a:'Yes! We offer special wholesale pricing for hotels, hospitals, schools, dormitories, and contractors. Contact us on +234 811 872 2788 for a custom bulk quote.'},
-  {q:'What is your return policy?',a:'We offer a 30-day return policy on all products. If you\'re not satisfied with your purchase, contact us within 30 days and we\'ll arrange a replacement or refund. Product must be in original condition.'},
-  {q:'How do I know which mattress to choose?',a:'Our team is trained to guide you. Generally: Maxicool is best for hot climates and orthopedic support; Classique is for luxury hotel-grade comfort; Restabeds is the best budget option. Call or WhatsApp us for personalized advice.'},
-  {q:'Can I pay on delivery?',a:'Yes, we accept payment on delivery for customers within Obollo-Afor. For out-of-town orders, we require a deposit before dispatch. Bank transfer, cash, and mobile money are accepted.'},
-  {q:'How do I write a review?',a:'Simply create an account or log in using the Login button at the top of the page, then visit the Reviews page and click to write your review. Your review will appear instantly!'},
-  {q:'How do I contact customer support?',a:'You can reach us on WhatsApp at +234 806 852 2444 (orders), +234 803 620 6500 (support), or +234 811 872 2788 (wholesale/team). We respond within minutes during working hours.'},
+// ── FAQ ──
+const FAQS=[
+  {q:'What is Mouka Foam?',a:'Mouka Foam is Nigeria\'s leading foam manufacturer, producing high-quality mattresses, pillows and foam products since 1959. IG NICE & SONS is an authorized distributor of 100% genuine Mouka Foam products.'},
+  {q:'Where are you located?',a:'We are at No. 4 Old Oturukpo Road, Obollo-Afor, Enugu State, Nigeria. Open Mon–Sat 8AM–7PM and Sun 10AM–4PM.'},
+  {q:'Do you offer delivery?',a:'Yes! Same-day delivery within Obollo-Afor for orders placed before 3PM. We also deliver across Enugu State and nationwide. FREE delivery on orders above ₦50,000 within Obollo-Afor.'},
+  {q:'How do I place an order?',a:'Three ways: (1) Fill the Contact form on this site, (2) Click "Order Now" on any product to chat on WhatsApp, or (3) Call us directly on +234 806 852 2444.'},
+  {q:'Are your products 100% genuine Mouka?',a:'Absolutely. We are an authorized Mouka Foam distributor. Every product comes directly from Mouka\'s official supply chain with the manufacturer\'s warranty. We never stock counterfeits.'},
+  {q:'What sizes are available?',a:'We carry all standard sizes: Single (3×6), Double (4×6), Queen (4.5×6), King (5×6), and custom sizes for institutional orders.'},
+  {q:'Do you offer wholesale pricing?',a:'Yes! Special wholesale pricing for hotels, hospitals, schools, dormitories and contractors. Contact us on +234 811 872 2788 for a bulk quote.'},
+  {q:'What is your return policy?',a:'30-day return policy on all products. If you\'re not satisfied, contact us within 30 days for a replacement or refund. Product must be in original condition.'},
+  {q:'Which mattress should I choose?',a:'Maxicool is best for hot climates and orthopedic support. Classique is luxury hotel-grade comfort. Restabeds is the best budget option. Call us for personalized advice!'},
+  {q:'Can I pay on delivery?',a:'Yes, payment on delivery is available within Obollo-Afor. Out-of-town orders require a deposit before dispatch. Bank transfer, cash and mobile money accepted.'},
+  {q:'How do I write a review?',a:'Create an account or log in (Login button, top right), then visit the Reviews page. You\'ll see a review form where you can rate and write about your experience.'},
+  {q:'How do I contact customer support?',a:'WhatsApp: +234 806 852 2444 (orders), +234 803 620 6500 (support), +234 811 872 2788 (wholesale). We respond within minutes during working hours.'},
 ];
 
-function buildFAQ() {
-  const list = document.getElementById('faqList');
-  if(!list) return;
-  list.innerHTML = FAQS.map((f,i)=>`
+function buildFAQ(){
+  const el=document.getElementById('faqContainer'); if(!el) return;
+  el.innerHTML=FAQS.map((f,i)=>`
     <div class="faq-item">
-      <div class="faq-q" onclick="toggleFAQ(${i})" id="fq${i}">
-        <span>${f.q}</span><span class="faq-arrow">▼</span>
-      </div>
+      <div class="faq-q" onclick="tFAQ(${i})" id="fq${i}"><span>${f.q}</span><span class="farr">▼</span></div>
       <div class="faq-a" id="fa${i}">${f.a}</div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
-function toggleFAQ(i) {
-  const q=document.getElementById('fq'+i);
-  const a=document.getElementById('fa'+i);
-  const wasOpen=q.classList.contains('open');
-  // Close all
-  FAQS.forEach((_,j)=>{document.getElementById('fq'+j)?.classList.remove('open');document.getElementById('fa'+j)?.classList.remove('open');});
-  if(!wasOpen){q.classList.add('open');a.classList.add('open');}
+function tFAQ(i){
+  const q=document.getElementById('fq'+i),a=document.getElementById('fa'+i);
+  const was=q.classList.contains('op');
+  FAQS.forEach((_,j)=>{document.getElementById('fq'+j)?.classList.remove('op');document.getElementById('fa'+j)?.classList.remove('op');});
+  if(!was){q.classList.add('op');a.classList.add('op');}
 }
 
-// ══════════════════════════════
-//  SCROLL REVEAL
-// ══════════════════════════════
+// ── SCROLL REVEAL ──
 (()=>{
   const els=document.querySelectorAll('.r,.rl,.rr');
-  if(!('IntersectionObserver' in window)){els.forEach(el=>el.classList.add('on'));return}
+  if(!('IntersectionObserver' in window)){els.forEach(e=>e.classList.add('on'));return}
   const obs=new IntersectionObserver(entries=>{
-    entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('on');obs.unobserve(e.target)}});
-  },{threshold:0.08,rootMargin:'0px 0px -20px 0px'});
-  els.forEach(el=>obs.observe(el));
+    entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('on');obs.unobserve(e.target);}});
+  },{threshold:0.08,rootMargin:'0px 0px -24px 0px'});
+  els.forEach(e=>obs.observe(e));
 })();
 
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){closeLogin();if(mnavEl.classList.contains('op'))toggleNav();}
+  if(e.key==='Escape'){closeLogin();if(document.getElementById('mnav').classList.contains('op'))toggleMnav();}
 });
 
-// INIT
+// Init
 buildFAQ();
-updateNavAuth(null); // start with logged-out state until Firebase confirms
+renderAuthArea(null); // start logged-out until Firebase confirms
 </script>
 </body>
 </html>
