@@ -19,7 +19,8 @@
 import { initializeApp }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import {
-  getAuth, GoogleAuthProvider, signInWithPopup,
+  getAuth, GoogleAuthProvider,
+  signInWithPopup, signInWithRedirect, getRedirectResult,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
   signOut, onAuthStateChanged, updateProfile, sendPasswordResetEmail
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -28,14 +29,17 @@ import {
   orderBy, serverTimestamp, doc, updateDoc, getDoc, setDoc
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
+// ── YOUR FIREBASE CONFIG ──
+// authDomain MUST stay as the .firebaseapp.com domain for Google auth to work.
+// Your GitHub Pages domain goes in Firebase Console → Auth → Authorized Domains.
 const firebaseConfig = {
-  apiKey: "AIzaSyDsY53Imzxz72aJG9lBLcj32oqGRC6jj7c",
-  authDomain: "ignice-and-sons.firebaseapp.com",
-  projectId: "ignice-and-sons",
-  storageBucket: "ignice-and-sons.firebasestorage.app",
+  apiKey:            "AIzaSyDsY53Imzxz72aJG9lBLcj32oqGRC6jj7c",
+  authDomain:        "ignice-and-sons.firebaseapp.com",
+  projectId:         "ignice-and-sons",
+  storageBucket:     "ignice-and-sons.firebasestorage.app",
   messagingSenderId: "757846488465",
-  appId: "1:757846488465:web:048a61d6446bafdecd1630",
-  measurementId: "G-5M4QLF2F4P"
+  appId:             "1:757846488465:web:048a61d6446bafdecd1630",
+  measurementId:     "G-5M4QLF2F4P"
 };
 
 const app  = initializeApp(firebaseConfig);
@@ -48,31 +52,55 @@ gp.setCustomParameters({ prompt: 'select_account' });
 
 window._fb = {
   auth, db, gp,
-  signInWithPopup, createUserWithEmailAndPassword,
-  signInWithEmailAndPassword, signOut, updateProfile,
-  sendPasswordResetEmail, collection, addDoc, getDocs,
-  query, orderBy, serverTimestamp, doc, updateDoc,
-  getDoc, setDoc
+  signInWithPopup, signInWithRedirect, getRedirectResult,
+  createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  signOut, updateProfile, sendPasswordResetEmail,
+  collection, addDoc, getDocs, query, orderBy,
+  serverTimestamp, doc, updateDoc, getDoc, setDoc
 };
-window._fbReady = true;
-
-// Track whether auth has resolved at least once
+window._fbReady    = true;
 window._authResolved = false;
 
-onAuthStateChanged(auth, async user => {
-  // Fix missing displayName for Google users
-  if (user && !user.displayName) {
-    const provName = user.providerData?.[0]?.displayName;
-    if (provName) {
-      try { await updateProfile(user, { displayName: provName }); } catch(e){}
+// ── Handle redirect result (for mobile / popup-blocked fallback) ──
+getRedirectResult(auth).then(async result => {
+  if (!result) return;
+  const user = result.user;
+  try {
+    const uref = doc(db, 'users', user.uid);
+    const snap = await getDoc(uref);
+    const parts = (user.displayName || '').split(' ');
+    if (!snap.exists()) {
+      await setDoc(uref, {
+        firstName: parts[0] || '', lastName: parts.slice(1).join(' ') || '',
+        displayName: user.displayName || user.email,
+        email: user.email, photo: user.photoURL || '',
+        provider: 'google', createdAt: serverTimestamp()
+      });
+    } else {
+      await setDoc(uref, {
+        photo: user.photoURL || '', displayName: user.displayName || user.email,
+        lastLogin: serverTimestamp()
+      }, { merge: true });
     }
+  } catch(e) { console.log('Firestore after redirect (non-fatal):', e); }
+  // Close modal if open, go to profile
+  if (typeof window.closeLogin === 'function') window.closeLogin();
+  if (typeof window.go === 'function') window.go('profile');
+}).catch(e => { console.log('Redirect result error (non-fatal):', e); });
+
+// ── Auth State Observer ──
+onAuthStateChanged(auth, async user => {
+  if (user && !user.displayName) {
+    const pn = user.providerData?.[0]?.displayName;
+    if (pn) { try { await updateProfile(user, { displayName: pn }); } catch(e){} }
   }
-  window._user = user || null;
+  window._user         = user || null;
   window._authResolved = true;
-  if (typeof window._onUser === 'function') window._onUser(user);
-  // If profile page is already showing, re-render it now that we have user
-  if (document.getElementById('pg-profile')?.classList.contains('on')) {
-    if (typeof window._renderProf === 'function') window._renderProf(user);
+  if (typeof window._onUser    === 'function') window._onUser(user);
+  if (typeof window._renderProf === 'function') {
+    if (document.getElementById('pg-profile')?.classList.contains('on')) {
+      window._renderProf(user);
+    }
   }
 });
 </script>
@@ -1196,6 +1224,8 @@ function renderAuthArea(user){
 const ov=document.getElementById('ov');
 function openLogin(){ ov.classList.add('on'); document.body.style.overflow='hidden'; }
 function closeLogin(){ ov.classList.remove('on'); document.body.style.overflow=''; }
+window.closeLogin = closeLogin;
+window.go = go;
 ov.addEventListener('click',e=>{ if(e.target===ov) closeLogin(); });
 
 function swTab(t){
@@ -1270,17 +1300,20 @@ function doReg(){
 }
 
 // ── GOOGLE LOGIN ──
+// Tries popup first. If blocked or on mobile, falls back to redirect.
 function doGoogle(){
   fb(async()=>{
     clrStat();
-    // Determine which status element to use
     const isLoginTab = document.getElementById('loginWrap').style.display !== 'none';
     const statId = isLoginTab ? 'lStat' : 'rStat';
+    setStat(statId, '⏳ Opening Google sign-in...', '');
+
     try{
-      window._fb.gp.setCustomParameters({ prompt: 'select_account' });
+      // ── Try popup first ──
       const result = await window._fb.signInWithPopup(window._fb.auth, window._fb.gp);
       const user = result.user;
-      // Save/update in Firestore
+
+      // Save to Firestore
       try{
         const uref = window._fb.doc(window._fb.db,'users',user.uid);
         const snap = await window._fb.getDoc(uref);
@@ -1294,32 +1327,41 @@ function doGoogle(){
           });
         } else {
           await window._fb.setDoc(uref,{
-            photo: user.photoURL||'', displayName: user.displayName||user.email,
+            photo: user.photoURL||'',
+            displayName: user.displayName||user.email,
             lastLogin: window._fb.serverTimestamp()
-          },{merge:true});
+          },{ merge:true });
         }
-      }catch(dbErr){ console.log('Firestore (non-fatal):',dbErr); }
-      setStat(statId,'✅ Signed in with Google! Redirecting...','ok');
-      setTimeout(()=>{ closeLogin(); go('profile'); }, 1000);
-    }catch(e){
-      console.error('Google login:',e.code, e.message);
-      let m;
-      switch(e.code){
-        case 'auth/popup-closed-by-user':
-        case 'auth/cancelled-popup-request':
-          m='Sign-in was cancelled. Please try again.'; break;
-        case 'auth/popup-blocked':
-          m='⚠️ Popup was blocked by your browser. Please allow popups for this site, then try again.'; break;
-        case 'auth/network-request-failed':
-          m='Network error. Please check your internet connection.'; break;
-        case 'auth/unauthorized-domain':
-          m='⚠️ This website domain is not authorized for Google sign-in. Please add it in Firebase Console → Authentication → Settings → Authorized Domains.'; break;
-        case 'auth/operation-not-allowed':
-          m='Google sign-in is not enabled. Please enable it in Firebase Console → Authentication → Sign-in methods.'; break;
-        default:
-          m='Google sign-in failed. Please use email login instead, or try again.';
+      } catch(dbErr){ console.log('Firestore (non-fatal):',dbErr); }
+
+      setStat(statId,'✅ Signed in with Google!','ok');
+      setTimeout(()=>{ closeLogin(); go('profile'); }, 900);
+
+    } catch(e){
+      console.error('Google popup error:',e.code, e.message);
+
+      // If popup was blocked → silently fall back to redirect (page reload)
+      if(e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user'){
+        setStat(statId,'🔄 Popup blocked — redirecting to Google...','');
+        try{
+          await window._fb.signInWithRedirect(window._fb.auth, window._fb.gp);
+          // Page will reload; getRedirectResult() at top handles completion
+          return;
+        } catch(re){
+          setStat(statId,'Google sign-in failed. Please use email login.','err');
+          return;
+        }
       }
-      setStat(statId, m, 'err');
+
+      // All other errors
+      const msgs = {
+        'auth/cancelled-popup-request': 'Another sign-in is already in progress.',
+        'auth/network-request-failed':  'Network error. Check your internet connection.',
+        'auth/unauthorized-domain':     '⚠️ Domain not authorized. Go to Firebase Console → Authentication → Settings → Authorized Domains and add your GitHub Pages URL.',
+        'auth/operation-not-allowed':   '⚠️ Google sign-in is not enabled. Enable it in Firebase Console → Authentication → Sign-in methods.',
+        'auth/internal-error':          'Internal error. Please try again in a moment.',
+      };
+      setStat(statId, msgs[e.code] || 'Google sign-in failed. Please use email login instead.', 'err');
     }
   });
 }
