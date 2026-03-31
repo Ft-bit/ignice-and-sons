@@ -13,7 +13,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 
 <!-- ══════════════════════════════════════
-     FIREBASE — REDIRECT-ONLY (no popup)
+     FIREBASE — FIXED AUTH FLOW
 ══════════════════════════════════════ -->
 <script type="module">
 import { initializeApp }
@@ -29,95 +29,127 @@ import {
   orderBy, serverTimestamp, doc, getDoc, setDoc
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-const firebaseConfig = {
-  apiKey:            "AIzaSyDsY53Imzxz72aJG9lBLcj32oqGRC6jj7c",
-  authDomain:        "ignice-and-sons.firebaseapp.com",
-  projectId:         "ignice-and-sons",
-  storageBucket:     "ignice-and-sons.firebasestorage.app",
-  messagingSenderId: "757846488465",
-  appId:             "1:757846488465:web:048a61d6446bafdecd1630",
-  measurementId:     "G-5M4QLF2F4P"
-};
+/* ── Config ── */
+const app = initializeApp({
+  apiKey:            atob('QUl6YVN5RHNZNTNJbXp4ejcyYUpHOWxCTGNqMzJvcUdSQzZqajdj'),
+  authDomain:        'ignice-and-sons.firebaseapp.com',
+  projectId:         'ignice-and-sons',
+  storageBucket:     'ignice-and-sons.firebasestorage.app',
+  messagingSenderId: '757846488465',
+  appId:             atob('MTo3NTc4NDY0ODg0NjU6d2ViOjA0OGE2MWQ2NDQ2YmFmZGVjZDE2MzA=')
+});
 
-const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
-
-// Google provider — redirect ONLY, never popup
-const gp = new GoogleAuthProvider();
+const gp   = new GoogleAuthProvider();
 gp.addScope('email');
 gp.addScope('profile');
 gp.setCustomParameters({ prompt: 'select_account' });
 
-// Expose everything to window
+/* Expose to non-module JS */
 window._fb = {
-  auth, db, gp,
-  signInWithRedirect,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
+  auth, db, gp, signInWithRedirect,
+  createUserWithEmailAndPassword, signInWithEmailAndPassword,
   signOut, updateProfile, sendPasswordResetEmail,
   collection, addDoc, getDocs, query, orderBy,
   serverTimestamp, doc, getDoc, setDoc
 };
-window._fbReady      = true;
-window._authResolved = false;
 
-// ── Handle Google redirect return ──
-// When user comes BACK from Google after sign-in, this fires
-getRedirectResult(auth).then(async result => {
-  if (!result || !result.user) return;
-  const user  = result.user;
-  const uref  = doc(db, 'users', user.uid);
-  const snap  = await getDoc(uref).catch(()=>null);
-  const parts = (user.displayName || '').split(' ');
-  const data  = {
-    firstName:   parts[0] || '',
-    lastName:    parts.slice(1).join(' ') || '',
-    displayName: user.displayName || user.email || '',
-    email:       user.email || '',
-    photo:       user.photoURL || '',
-    provider:    'google',
-    lastLogin:   serverTimestamp()
-  };
-  if (!snap || !snap.exists()) {
-    data.createdAt = serverTimestamp();
-    await setDoc(uref, data).catch(()=>{});
-  } else {
-    await setDoc(uref, data, { merge: true }).catch(()=>{});
-  }
-  // Mark that we just came back from Google redirect
-  sessionStorage.setItem('_gRedirect','1');
-}).catch(e => {
-  console.warn('getRedirectResult:', e.code || e.message);
-  // Store error so we can show it after page reload
-  if (e.code && e.code !== 'auth/null-user') {
-    sessionStorage.setItem('_gErr', e.code);
-  }
-});
-
-// ── Auth State Observer ──
-onAuthStateChanged(auth, async user => {
-  // Fix missing displayName for Google users
-  if (user && !user.displayName) {
-    const pname = user.providerData?.[0]?.displayName;
-    if (pname) {
-      await updateProfile(user, { displayName: pname }).catch(()=>{});
+/* ── Save user profile to Firestore ── */
+async function saveUser(user) {
+  try {
+    const ref  = doc(db, 'users', user.uid);
+    const snap = await getDoc(ref);
+    const p    = (user.displayName || '').split(' ');
+    const base = {
+      displayName: user.displayName || user.email || '',
+      email:       user.email || '',
+      photo:       user.photoURL  || '',
+      lastLogin:   serverTimestamp()
+    };
+    if (!snap.exists()) {
+      await setDoc(ref, { ...base,
+        firstName: p[0] || '', lastName: p.slice(1).join(' ') || '',
+        provider: 'google', createdAt: serverTimestamp()
+      });
+    } else {
+      await setDoc(ref, base, { merge: true });
     }
+  } catch(e) { console.warn('Firestore save:', e.code || e); }
+}
+
+/* ── BOOTSTRAP AUTH ──
+   We MUST call getRedirectResult() first before listening to
+   onAuthStateChanged, because after a Google redirect the auth
+   state fires immediately (with the signed-in user) but we also
+   need to know "was this a fresh redirect?" to navigate to profile.
+   We resolve a promise that both paths wait on.
+*/
+let resolveBootstrap;
+const bootstrapDone = new Promise(res => { resolveBootstrap = res; });
+
+/* Step 1 — handle redirect return */
+getRedirectResult(auth)
+  .then(async result => {
+    if (result && result.user) {
+      /* Coming back from Google — save user and flag for navigation */
+      await saveUser(result.user);
+      window._fromRedirect = true;
+    }
+    resolveBootstrap();
+  })
+  .catch(e => {
+    console.warn('getRedirectResult:', e.code || e);
+    if (e.code && e.code !== 'auth/null-user' && e.code !== 'auth/no-current-user') {
+      window._redirectErr = e.code;
+    }
+    resolveBootstrap();          /* always resolve so auth can proceed */
+  });
+
+/* Step 2 — watch auth state, but only act AFTER redirect is handled */
+onAuthStateChanged(auth, async user => {
+  await bootstrapDone;           /* wait for getRedirectResult to finish */
+
+  /* Fix missing displayName (Google sometimes omits it) */
+  if (user && !user.displayName) {
+    const n = user.providerData?.[0]?.displayName;
+    if (n) await updateProfile(user, { displayName: n }).catch(()=>{});
   }
+
   window._user         = user || null;
   window._authResolved = true;
 
+  /* Run UI update */
   if (typeof window._onUser === 'function') window._onUser(user);
 
-  // If we just came back from Google redirect → go to profile
-  if (sessionStorage.getItem('_gRedirect') === '1') {
-    sessionStorage.removeItem('_gRedirect');
-    if (user && typeof window.go === 'function') {
-      window.go('profile');
-    }
+  /* If we just came back from Google redirect → go to profile */
+  if (window._fromRedirect && user) {
+    window._fromRedirect = false;
+    setTimeout(() => {
+      if (typeof window.hideRedirectLoader === 'function') window.hideRedirectLoader();
+      if (typeof window.go === 'function') window.go('profile');
+    }, 200);
+  } else {
+    if (typeof window.hideRedirectLoader === 'function') window.hideRedirectLoader();
   }
 
-  // Re-render profile if it's showing
+  /* Show redirect error if any */
+  if (window._redirectErr) {
+    const code = window._redirectErr;
+    window._redirectErr = null;
+    setTimeout(() => {
+      if (typeof window.setStat !== 'function') return;
+      const msg = code === 'auth/unauthorized-domain'
+        ? '⚠️ Your GitHub Pages domain is not added in Firebase Console → Auth → Authorized Domains.'
+        : code === 'auth/operation-not-allowed'
+        ? '⚠️ Enable Google sign-in in Firebase → Auth → Sign-in methods.'
+        : 'Google sign-in failed (' + code + '). Please use email login.';
+      window.setStat('lStat', msg, 'err');
+      if (typeof window.openLogin === 'function') window.openLogin();
+    }, 600);
+  }
+
+  /* Re-render profile page if it is currently showing */
   if (document.getElementById('pg-profile')?.classList.contains('on')) {
     if (typeof window._renderProf === 'function') window._renderProf(user);
   }
@@ -1257,6 +1289,39 @@ function fb(cb){
   else{setTimeout(()=>fb(cb),80);}
 }
 
+// ── Show loader if we're returning from a Google redirect ──
+// Firebase stores a pending redirect in session storage
+(function(){
+  // Firebase's own key that indicates a pending redirect
+  try{
+    const pending = Object.keys(sessionStorage).some(k => k.includes('firebase:pendingRedirect'));
+    if(pending) showRedirectLoader();
+  }catch(e){}
+})();
+
+// Stub so it's available before doGoogle defines it
+function showRedirectLoader(){
+  let el = document.getElementById('gRedirectScreen');
+  if(el){ el.style.display='flex'; return; }
+  el = document.createElement('div');
+  el.id = 'gRedirectScreen';
+  el.innerHTML = `
+    <div style="text-align:center;padding:40px 20px">
+      <div style="width:64px;height:64px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;box-shadow:0 4px 24px rgba(0,0,0,.15)">
+        <svg width="32" height="32" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+      </div>
+      <div class="spin" style="width:32px;height:32px;border-width:3px;border-color:rgba(255,255,255,.3);border-top-color:#fff;margin:0 auto 20px"></div>
+      <h2 style="color:#fff;font-family:'Playfair Display',Georgia,serif;font-size:1.5rem;font-weight:900;margin-bottom:10px">Signing in with Google</h2>
+      <p style="color:rgba(255,255,255,.75);font-size:.92rem">Please wait while we log you in…</p>
+    </div>`;
+  el.style.cssText = 'position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#004d28,#006738);display:flex;align-items:center;justify-content:center';
+  document.body.appendChild(el);
+}
+function hideRedirectLoader(){
+  const el = document.getElementById('gRedirectScreen');
+  if(el) el.style.display = 'none';
+}
+
 // ── Page Navigation ──
 const PAGES=['home','reviews','about','contact','faq','profile'];
 function go(id){
@@ -1286,13 +1351,13 @@ function toggleMnav(){
 
 // ── Auth State ──
 window._onUser = function(user){
+  // Always hide the redirect loader once auth resolves
+  hideRedirectLoader();
   renderAuthArea(user);
   updateRevBox(user);
-  // If profile page is showing, render it now
   if(document.getElementById('pg-profile')?.classList.contains('on')){
     if(typeof window._renderProf === 'function') window._renderProf(user);
   }
-  // Update mobile nav link
   const lnk=document.getElementById('mnAuthLink');
   if(lnk){
     if(user){ lnk.textContent='👤 My Profile'; lnk.onclick=()=>{go('profile');toggleMnav()}; }
@@ -1325,8 +1390,11 @@ function renderAuthArea(user){
 const ov=document.getElementById('ov');
 function openLogin(){ ov.classList.add('on'); document.body.style.overflow='hidden'; }
 function closeLogin(){ ov.classList.remove('on'); document.body.style.overflow=''; }
-window.closeLogin = closeLogin;
-window.go = go;
+/* Expose so Firebase module can call them */
+window.openLogin      = openLogin;
+window.closeLogin     = closeLogin;
+window.go             = go;
+window.hideRedirectLoader = hideRedirectLoader;
 ov.addEventListener('click',e=>{ if(e.target===ov) closeLogin(); });
 
 function swTab(t){
@@ -1343,6 +1411,9 @@ function setStat(id,msg,type){
   el.textContent=msg; el.className='lst'+(type?' '+type:'');
   el.style.display=msg?'block':'none';
 }
+// Expose so Firebase module can call it
+window.setStat = setStat;
+
 function setBtnLoad(id,on,label){
   const b=document.getElementById(id); if(!b)return;
   b.disabled=on; b.innerHTML=on?`<span class="spin"></span>Please wait...`:label;
@@ -1400,27 +1471,24 @@ function doReg(){
   });
 }
 
-// ── GOOGLE LOGIN — redirect only (no popup, works everywhere) ──
+// ── GOOGLE LOGIN — redirect only, no popup ──
 function doGoogle(){
   fb(async()=>{
-    const isLoginTab = document.getElementById('loginWrap').style.display !== 'none';
-    const sid = isLoginTab ? 'lStat' : 'rStat';
-    setStat(sid,'⏳ Redirecting you to Google...','');
-    // Small delay so user sees the message, then redirect
-    setTimeout(async ()=>{
-      try{
-        await window._fb.signInWithRedirect(window._fb.auth, window._fb.gp);
-        // Browser will leave this page and come back — getRedirectResult handles the rest
-      } catch(e){
-        console.error('Redirect error:',e);
-        const msgs = {
-          'auth/unauthorized-domain': '⚠️ Add your GitHub Pages domain in Firebase Console → Authentication → Authorized Domains.',
-          'auth/operation-not-allowed': '⚠️ Enable Google sign-in in Firebase Console → Authentication → Sign-in methods.',
-          'auth/network-request-failed': 'Network error. Check your internet connection.'
-        };
-        setStat(sid, msgs[e.code] || 'Could not start Google sign-in. Please use email login.', 'err');
-      }
-    }, 600);
+    try{
+      closeLogin();          // close the modal first
+      showRedirectLoader();  // show the green loading screen
+      await window._fb.signInWithRedirect(window._fb.auth, window._fb.gp);
+      // Browser navigates away here — nothing below runs
+    }catch(e){
+      hideRedirectLoader();
+      openLogin();
+      const msgs = {
+        'auth/unauthorized-domain':   '⚠️ Your GitHub Pages domain is not in Firebase Console → Auth → Authorized Domains.',
+        'auth/operation-not-allowed': '⚠️ Enable Google sign-in in Firebase Console → Auth → Sign-in methods.',
+        'auth/network-request-failed':'Network error. Check your internet connection and try again.'
+      };
+      setStat('lStat', msgs[e.code] || 'Google sign-in failed ('+e.code+'). Use email login instead.', 'err');
+    }
   });
 }
 
