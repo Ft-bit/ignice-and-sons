@@ -583,6 +583,27 @@ button{font-family:var(--fb)}
 .spin{display:inline-block;width:16px;height:16px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle;margin-right:4px}
 @keyframes sp{to{transform:rotate(360deg)}}
 
+/* ── Password eye toggle ── */
+.pw-wrap{position:relative;display:flex;align-items:center}
+.pw-wrap input{width:100%;padding-right:42px}
+.eye-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;color:var(--g500);display:flex;align-items:center;justify-content:center;border-radius:6px;transition:color .2s}
+.eye-btn:hover{color:var(--g)}
+.eye-btn:focus{outline:none}
+.eye-ic{width:18px;height:18px;display:block;transition:opacity .2s}
+.eye-btn.shown .eye-ic{opacity:.5}
+
+/* ── Modal tab hint ── */
+.tab-hint{font-size:.8rem;color:var(--g700);margin-bottom:14px;padding:9px 12px;background:var(--gl);border-radius:var(--rs);border-left:3px solid var(--g);line-height:1.5}
+.tab-hint a{color:var(--g);font-weight:700;cursor:pointer;text-decoration:underline}
+.tab-hint a:hover{color:var(--gm)}
+
+/* ── Redirect note ── */
+.redir-note{font-size:.72rem;color:var(--g500);text-align:center;margin-top:5px}
+
+/* ── Name row in register ── */
+.name-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:400px){.name-row{grid-template-columns:1fr}}
+
 /* ══════════════════════════════
    RESPONSIVE — MOBILE FRIENDLY
 ══════════════════════════════ */
@@ -1230,51 +1251,81 @@ button{font-family:var(--fb)}
 <div class="overlay" id="ov">
   <div class="modal">
     <button class="mc" onclick="closeLogin()">&#215;</button>
-    <div class="mhd"><div class="mico">IG</div><h2>IG NICE &amp; SONS</h2><p>Your Mouka Foam Account</p></div>
-    <div class="mtabs">
-      <button class="mtab on" id="t1" onclick="swTab('login')">Login</button>
-      <button class="mtab" id="t2" onclick="swTab('reg')">Register</button>
+    <div class="mhd">
+      <div class="mico">IG</div>
+      <h2>IG NICE &amp; SONS</h2>
+      <p>Your Mouka Foam Account</p>
     </div>
-    <!-- LOGIN -->
+    <div class="mtabs">
+      <button class="mtab on" id="t1" onclick="swTab('login')">🔑 Login</button>
+      <button class="mtab" id="t2" onclick="swTab('reg')">✨ Register</button>
+    </div>
+
+    <!-- ── LOGIN TAB ── -->
     <div id="loginWrap">
       <div id="lStat" class="lst"></div>
-      <p style="font-size:.8rem;color:var(--g500);margin-bottom:14px;padding:10px 12px;background:var(--gl);border-radius:var(--rs);border-left:3px solid var(--g)">
-        👋 <strong>Welcome back!</strong> Enter your email and password. New customer? <a onclick="swTab('register')" style="color:var(--g);font-weight:700;cursor:pointer;text-decoration:underline">Create a free account</a>
-      </p>
+      <p class="tab-hint">👋 <strong>Welcome back!</strong> New here? <a onclick="swTab('reg')">Create a free account →</a></p>
       <div class="mform">
-        <div class="fg"><label>Email Address</label><input type="email" id="lEm" placeholder="your@email.com" autocomplete="email"/></div>
-        <div class="fg"><label>Password</label><input type="password" id="lPw" placeholder="••••••••" autocomplete="current-password"/><span class="frg" onclick="resetPw()">Forgot password?</span></div>
+        <div class="fg">
+          <label>Email Address</label>
+          <input type="email" id="lEm" placeholder="your@email.com" autocomplete="email"/>
+        </div>
+        <div class="fg">
+          <label>Password</label>
+          <div class="pw-wrap">
+            <input type="password" id="lPw" placeholder="••••••••" autocomplete="current-password"/>
+            <button type="button" class="eye-btn" onclick="togglePw('lPw',this)" title="Show/hide password">
+              <svg class="eye-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <span class="frg" onclick="resetPw()">Forgot password?</span>
+        </div>
         <button class="lbtn" id="lBtn" onclick="doLogin()">Login to Account</button>
-        <div class="orl">or sign in with</div>
+        <div class="orl">or</div>
         <button class="gbtn" onclick="doGoogle()">
           <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-          Continue with Google →
+          Continue with Google
         </button>
-        <p style="font-size:.74rem;color:var(--g500);text-align:center;margin-top:4px">You will be redirected to Google to sign in</p>
+        <p class="redir-note">↗ You'll be taken to Google's sign-in page</p>
       </div>
     </div>
-    <!-- REGISTER -->
+
+    <!-- ── REGISTER TAB ── -->
     <div id="regWrap" style="display:none">
       <div id="rStat" class="lst"></div>
-      <p style="font-size:.8rem;color:var(--g500);margin-bottom:14px;padding:10px 12px;background:var(--gl);border-radius:var(--rs);border-left:3px solid var(--g)">
-        📋 <strong>New here?</strong> Fill in your details below to create your account. Already have an account? <a onclick="swTab('login')" style="color:var(--g);font-weight:700;cursor:pointer;text-decoration:underline">Click here to Login</a>
-      </p>
+      <p class="tab-hint">📋 <strong>Create your account.</strong> Already registered? <a onclick="swTab('login')">Login here →</a></p>
       <div class="mform">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div class="fg"><label>First Name *</label><input type="text" id="rFn" placeholder="e.g. John" autocomplete="given-name"/></div>
-          <div class="fg"><label>Last Name *</label><input type="text" id="rLn" placeholder="e.g. Doe" autocomplete="family-name"/></div>
+        <div class="name-row">
+          <div class="fg"><label>First Name *</label><input type="text" id="rFn" placeholder="John" autocomplete="given-name"/></div>
+          <div class="fg"><label>Last Name *</label><input type="text" id="rLn" placeholder="Doe" autocomplete="family-name"/></div>
         </div>
         <div class="fg"><label>Email Address *</label><input type="email" id="rEm" placeholder="your@email.com" autocomplete="email"/></div>
         <div class="fg"><label>Phone Number *</label><input type="tel" id="rPh" placeholder="+234 xxx xxx xxxx" autocomplete="tel"/></div>
-        <div class="fg"><label>Password * <small style="font-weight:400;color:var(--g500)">(min 6 characters)</small></label><input type="password" id="rPw" placeholder="Create a strong password" autocomplete="new-password"/></div>
-        <div class="fg"><label>Confirm Password *</label><input type="password" id="rPw2" placeholder="Re-enter your password" autocomplete="new-password"/></div>
-        <button class="lbtn" id="rBtn" onclick="doReg()">✅ Create My Account</button>
-        <div class="orl">or register with</div>
+        <div class="fg">
+          <label>Password * <small>(min 6 characters)</small></label>
+          <div class="pw-wrap">
+            <input type="password" id="rPw" placeholder="Create a strong password" autocomplete="new-password"/>
+            <button type="button" class="eye-btn" onclick="togglePw('rPw',this)" title="Show/hide">
+              <svg class="eye-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Confirm Password *</label>
+          <div class="pw-wrap">
+            <input type="password" id="rPw2" placeholder="Re-enter your password" autocomplete="new-password"/>
+            <button type="button" class="eye-btn" onclick="togglePw('rPw2',this)" title="Show/hide">
+              <svg class="eye-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <button class="lbtn" id="rBtn" onclick="doReg()">Create My Account</button>
+        <div class="orl">or</div>
         <button class="gbtn" onclick="doGoogle()">
           <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-          Sign up with Google →
+          Sign up with Google
         </button>
-        <p style="font-size:.74rem;color:var(--g500);text-align:center;margin-top:4px">You will be redirected to Google to sign in</p>
+        <p class="redir-note">↗ You'll be taken to Google's sign-in page</p>
       </div>
     </div>
   </div>
@@ -1292,9 +1343,46 @@ button{font-family:var(--fb)}
 <script>
 // ── Wait for Firebase ──
 function fb(cb){
-  if(window._fb){cb();}
-  else{setTimeout(()=>fb(cb),80);}
+  if(window._fb){ cb(); }
+  else { setTimeout(()=>fb(cb), 80); }
 }
+
+// ── Password show/hide toggle ──
+function togglePw(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  if (!inp) return;
+  const isHidden = inp.type === 'password';
+  inp.type = isHidden ? 'text' : 'password';
+  btn.classList.toggle('shown', isHidden);
+  // Swap eye icon open/closed
+  btn.querySelector('.eye-ic').innerHTML = isHidden
+    ? '<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24M1 1l22 22" stroke-linecap="round" stroke-linejoin="round"/>'
+    : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+}
+
+// ── Page Navigation — persists across refresh ──
+const PAGES=['home','reviews','about','contact','faq','profile'];
+
+function go(id){
+  // Don't persist profile page across refresh (auth might not have loaded yet)
+  if(id !== 'profile') sessionStorage.setItem('_lastPage', id);
+  PAGES.forEach(p => {
+    document.getElementById('pg-'+p)?.classList.toggle('on', p===id);
+  });
+  window.scrollTo({top:0,behavior:'smooth'});
+  const footer = document.getElementById('footer');
+  if(footer) footer.style.display = (id==='profile') ? 'none' : 'block';
+  if(id==='reviews') loadRevs();
+  if(id==='profile') loadProf();
+}
+
+// Restore last page on load (but not profile — wait for auth)
+(function restorePage(){
+  const last = sessionStorage.getItem('_lastPage');
+  if(last && last !== 'profile' && PAGES.includes(last)) go(last);
+})();
+
+function later(sel){ setTimeout(()=>{ document.querySelector(sel)?.scrollIntoView({behavior:'smooth'}); }, 200); }
 
 // ── Show loader if we're returning from a Google redirect ──
 // Firebase stores a pending redirect in session storage
@@ -1328,19 +1416,6 @@ function hideRedirectLoader(){
   const el = document.getElementById('gRedirectScreen');
   if(el) el.style.display = 'none';
 }
-
-// ── Page Navigation ──
-const PAGES=['home','reviews','about','contact','faq','profile'];
-function go(id){
-  PAGES.forEach(p=>{
-    document.getElementById('pg-'+p)?.classList.toggle('on',p===id);
-  });
-  window.scrollTo({top:0,behavior:'smooth'});
-  document.getElementById('footer').style.display = (id==='profile')?'none':'block';
-  if(id==='reviews') loadRevs();
-  if(id==='profile') loadProf();
-}
-function later(sel){setTimeout(()=>{ document.querySelector(sel)?.scrollIntoView({behavior:'smooth'}); },200);}
 
 // ── Navbar scroll ──
 window.addEventListener('scroll',()=>{
@@ -1405,12 +1480,21 @@ window.hideRedirectLoader = hideRedirectLoader;
 ov.addEventListener('click',e=>{ if(e.target===ov) closeLogin(); });
 
 function swTab(t){
-  const isL=t==='login';
-  document.getElementById('loginWrap').style.display=isL?'block':'none';
-  document.getElementById('regWrap').style.display=isL?'none':'block';
-  document.getElementById('t1').classList.toggle('on',isL);
-  document.getElementById('t2').classList.toggle('on',!isL);
+  const isL = (t==='login');
+  document.getElementById('loginWrap').style.display = isL?'block':'none';
+  document.getElementById('regWrap').style.display   = isL?'none':'block';
+  document.getElementById('t1').classList.toggle('on', isL);
+  document.getElementById('t2').classList.toggle('on', !isL);
   clrStat();
+  // Clear password fields when switching
+  ['lPw','rPw','rPw2'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.type='password';
+  });
+  document.querySelectorAll('.eye-btn').forEach(b=>{
+    b.classList.remove('shown');
+    const ic=b.querySelector('.eye-ic'); if(!ic) return;
+    ic.innerHTML='<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+  });
 }
 function clrStat(){ setStat('lStat','',''); setStat('rStat','',''); }
 function setStat(id,msg,type){
@@ -1436,21 +1520,22 @@ function doLogin(){
     setBtnLoad('lBtn',true,'Login to Account');
     try{
       await window._fb.signInWithEmailAndPassword(window._fb.auth,em,pw);
-      setStat('lStat','✅ Logged in! Redirecting...','ok');
-      setTimeout(()=>{closeLogin();go('profile');},1000);
+      // ✅ Close modal instantly — no "redirecting" flash
+      closeLogin();
+      go('profile');
     }catch(e){
       console.log('Login error:',e.code);
       const m=
-        e.code==='auth/user-not-found'      ? 'No account found with this email. Please register first.' :
-        e.code==='auth/invalid-credential'  ? 'Incorrect email or password. Please try again.' :
-        e.code==='auth/wrong-password'      ? 'Incorrect password. Please try again.' :
-        e.code==='auth/invalid-email'       ? 'Invalid email address.' :
-        e.code==='auth/user-disabled'       ? 'This account has been disabled. Contact support.' :
-        e.code==='auth/too-many-requests'   ? 'Too many failed attempts. Please wait a few minutes and try again.' :
-        e.code==='auth/network-request-failed' ? 'Network error. Check your internet connection.' :
+        e.code==='auth/user-not-found'         ? 'No account found with this email. Please register.' :
+        e.code==='auth/invalid-credential'     ? 'Incorrect email or password. Try again.' :
+        e.code==='auth/wrong-password'         ? 'Incorrect password. Try again.' :
+        e.code==='auth/invalid-email'          ? 'Please enter a valid email address.' :
+        e.code==='auth/user-disabled'          ? 'This account is disabled. Contact support.' :
+        e.code==='auth/too-many-requests'      ? 'Too many attempts. Wait a few minutes and try again.' :
+        e.code==='auth/network-request-failed' ? 'Network error. Check your connection.' :
         'Login failed ('+e.code+'). Please try again.';
       setStat('lStat',m,'err');
-    }finally{setBtnLoad('lBtn',false,'Login to Account');}
+    }finally{ setBtnLoad('lBtn',false,'Login to Account'); }
   });
 }
 
@@ -1483,8 +1568,9 @@ function doReg(){
         email:em, phone:ph, provider:'email',
         createdAt:window._fb.serverTimestamp()
       });
-      setStat('rStat','✅ Account created! Welcome, '+fn+'! Redirecting...','ok');
-      setTimeout(()=>{closeLogin();go('profile');},1200);
+      setStat('rStat','✅ Account created! Welcome, '+fn+'!','ok');
+      // Close and go to profile immediately
+      setTimeout(()=>{closeLogin();go('profile');},800);
     }catch(e){
       console.log('Register error:',e.code, e.message);
       const m=
